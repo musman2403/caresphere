@@ -17,8 +17,12 @@ DROP TABLE IF EXISTS Departments CASCADE;
 -- 1. Departments Table
 CREATE TABLE Departments (
     Depid SERIAL PRIMARY KEY,
-    DepartmentName VARCHAR(100) NOT NULL
+    DepartmentName VARCHAR(100) NOT NULL UNIQUE
 );
+
+-- SEED DEPARTMENTS
+INSERT INTO Departments (DepartmentName) VALUES 
+('Emergency'), ('Surgical'), ('Pediatrics'), ('Orthopedics'), ('Radiology');
 
 -- 2. Receptionist Table
 CREATE TABLE Receptionist (
@@ -26,7 +30,8 @@ CREATE TABLE Receptionist (
     Name VARCHAR(100) NOT NULL,
     Depid INT REFERENCES Departments(Depid),
     Gender VARCHAR(20),
-    Email VARCHAR(100) UNIQUE,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    PasswordHash VARCHAR(255) DEFAULT 'password123',
     PhoneNo VARCHAR(20),
     Address TEXT,
     Shift VARCHAR(50),
@@ -41,7 +46,8 @@ CREATE TABLE Doctor (
     Gender VARCHAR(20),
     DOB DATE,
     PhoneNo VARCHAR(20),
-    Email VARCHAR(100) UNIQUE,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    PasswordHash VARCHAR(255) DEFAULT 'password123',
     Address TEXT,
     Qualification VARCHAR(200),
     Specialization VARCHAR(200),
@@ -57,7 +63,8 @@ CREATE TABLE Nurse (
     Depid INT REFERENCES Departments(Depid),
     Gender VARCHAR(20),
     PhoneNo VARCHAR(20),
-    Email VARCHAR(100) UNIQUE,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    PasswordHash VARCHAR(255) DEFAULT 'password123',
     Address TEXT,
     Salary DECIMAL(10,2),
     Shift VARCHAR(50),
@@ -70,7 +77,8 @@ CREATE TABLE WardBoy (
     WardBName VARCHAR(100) NOT NULL,
     Depid INT REFERENCES Departments(Depid),
     Gender VARCHAR(20),
-    Email VARCHAR(100) UNIQUE,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    PasswordHash VARCHAR(255) DEFAULT 'password123',
     Address TEXT,
     PhoneNo VARCHAR(20),
     Salary DECIMAL(10,2),
@@ -85,7 +93,8 @@ CREATE TABLE Patient (
     Gender VARCHAR(20),
     DOB DATE,
     PhoneNo VARCHAR(20),
-    Email VARCHAR(100) UNIQUE,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    PasswordHash VARCHAR(255) NOT NULL,
     Address TEXT,
     BloodGroup VARCHAR(5),
     EmergencyPhoneNo VARCHAR(20),
@@ -109,11 +118,19 @@ CREATE TABLE Appointment (
 CREATE TABLE Ward (
     Wardid SERIAL PRIMARY KEY,
     WardNo VARCHAR(20) NOT NULL UNIQUE,
-    TotalBeds INT NOT NULL,
-    AvailableBeds INT NOT NULL,
+    TotalBeds INT NOT NULL DEFAULT 20,
+    AvailableBeds INT NOT NULL DEFAULT 20,
     Depid INT REFERENCES Departments(Depid),
     Status VARCHAR(50) DEFAULT 'Active'
 );
+
+-- SEED WARDS
+INSERT INTO Ward (WardNo, TotalBeds, AvailableBeds, Depid) VALUES 
+('E-101', 20, 15, 1), 
+('S-201', 20, 8, 2), 
+('P-301', 20, 12, 3), 
+('O-401', 20, 5, 4), 
+('R-501', 20, 20, 5);
 
 -- 9. Admins Table
 CREATE TABLE Admins (

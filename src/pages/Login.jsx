@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import './SharedPages.css';
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = login(username, password);
+    setError('');
+    const res = await login(email, password);
     if (res.success) {
       navigate('/dashboard');
     } else {
@@ -20,43 +23,49 @@ const Login = () => {
   };
 
   return (
-    <div>
-      <h1>CareSphere</h1>
-      <p>Welcome back! Please login.</p>
-      
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Username</label>
-          <input 
-            type="text" 
-            value={username} 
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Password</label>
-          <input 
-            type="password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-          />
-        </div>
+    <div className="page-wrapper dark-nav">
+      <Navbar />
+      <header className="page-header">
+        <h1>CareSphere Login</h1>
+        <p>Welcome back! Please login to your account.</p>
+      </header>
 
-        {error && <p>{error}</p>}
+      <main className="form-container">
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Email Address</label>
+            <input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Password</label>
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+          </div>
 
-        <button type="submit">
-          Login
-        </button>
+          {error && <p style={{color: 'red', marginBottom: '15px'}}>{error}</p>}
 
-        <p>
-          Don't have an account? <Link to="/signup">Sign Up</Link>
-        </p>
-      </form>
+          <button type="submit" className="submit-btn" style={{marginBottom: '15px'}}>
+            Login
+          </button>
+
+          <p style={{textAlign: 'center'}}>
+            Don't have an account? <Link to="/signup" style={{color: '#00b4db', fontWeight: 'bold'}}>Sign Up</Link>
+          </p>
+        </form>
+      </main>
+      <Footer />
     </div>
   );
 };

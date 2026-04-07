@@ -110,7 +110,7 @@ const Users = () => {
                         </td>
                         <td>
                           {u.id !== user.id && (
-                            <button onClick={() => removeUser(u.id)}>Remove</button>
+                            <button onClick={() => removeUser(u)}>Remove</button>
                           )}
                         </td>
                       </tr>
