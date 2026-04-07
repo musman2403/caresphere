@@ -1,0 +1,119 @@
+.page-wrapper {
+  background: #f4f7f6;
+  min-height: 100vh;
+  font-family: 'Outfit', sans-serif;
+  color: #112A46;
+  padding-bottom: 50px;
+}
+
+.page-header {
+  background: linear-gradient(135deg, #112A46 0%, #004d7a 100%);
+  color: white;
+  padding: 120px 20px 60px;
+  text-align: center;
+  position: relative;
+}
+
+.page-header h1 {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: white;
+}
+
+.page-header p {
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin: 0 auto;
+  opacity: 0.9;
+}
+
+.form-container {
+  max-width: 650px;
+  margin: -40px auto 0;
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 10;
+}
+
+.form-group {
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: 'Outfit', sans-serif;
+  transition: border-color 0.3s;
+  background-color: #f8f9fa;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #00b4db;
+  background-color: white;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #00b4db 0%, #0083B0 100%);
+  color: white;
+  border: none;
+  padding: 16px 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.3s;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 180, 219, 0.3);
+}
+
+/* Contact Info Blocks */
+.contact-grid {
+  display: flex;
+  gap: 30px;
+  max-width: 1000px;
+  margin: 50px auto;
+  padding: 0 20px;
+}
+
+.contact-card {
+  flex: 1;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.contact-card h3 {
+  color: #0083B0;
+  margin-bottom: 10px;
+}
+
+.dark-nav .navbar {
+  background: #112A46 !important;
+  padding: 15px 50px !important;
+}
