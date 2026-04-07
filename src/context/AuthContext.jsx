@@ -8,15 +8,42 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [appointments, setAppointments] = useState([]);
-  const [applications, setApplications] = useState([]); // Kept for logic, but will use Supabase later if needed
+  const [applications, setApplications] = useState([]); 
   const [wards, setWards] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper to find profile and role from SQL tables based on email
+  const fetchProfileByEmail = async (email) => {
+    const tables = ['Admins', 'Doctor', 'Nurse', 'Receptionist', 'WardBoy', 'Patient'];
+    const emailFields = { Admins: 'Username', Doctor: 'Email', Nurse: 'Email', Receptionist: 'Email', WardBoy: 'Email', Patient: 'Email' };
+    
+    for (const table of tables) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .eq(emailFields[table], email)
+        .single();
+      
+      if (data && !error) {
+        let role = table.toLowerCase();
+        if (role === 'doctor') role = ROLES.DOCTOR;
+        if (role === 'admins') role = ROLES.ADMIN;
+        
+        return { 
+          id: data.Adminid || data.Docid || data.Pid || data.Nurseid || data.Repid || data.WardBid,
+          name: data.Name || data.PName || data.NurseName || data.WardBName || data.Username || data.Username?.split('@')[0],
+          email: email,
+          role: role,
+          profile: data
+        };
+      }
+    }
+    return null;
+  };
+
   const fetchAllData = async () => {
     try {
-      setLoading(true);
-      
-      // 1. Fetch Users from all tables
+      // 1. Fetch Users from all tables for admin views
       const [
         { data: admins },
         { data: doctors },
@@ -35,7 +62,7 @@ export const AuthProvider = ({ children }) => {
         supabase.from('Departments').select('*')
       ]);
 
-      const deptMap = depts.reduce((acc, d) => ({ ...acc, [d.Depid]: d.DepartmentName }), {});
+      const deptMap = (depts || []).reduce((acc, d) => ({ ...acc, [d.Depid]: d.DepartmentName }), {});
 
       const consolidatedUsers = [
         ...(admins || []).map(u => ({ ...u, id: u.Adminid, name: u.Username.split('@')[0], email: u.Username, role: ROLES.ADMIN })),
@@ -77,57 +104,58 @@ export const AuthProvider = ({ children }) => {
 
     } catch (err) {
       console.error("Error fetching data:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('caresphere_current_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfileByEmail(session.user.email).then(profile => {
+          if (profile) setUser(profile);
+          else setUser({ email: session.user.email, role: 'unauthorized', name: 'New User' });
+        });
+      }
+      setLoading(false);
+    });
+
+    // Listen for Auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const profile = await fetchProfileByEmail(session.user.email);
+        if (profile) setUser(profile);
+        else setUser({ email: session.user.email, role: 'unauthorized', name: 'New User' });
+      } else {
+        setUser(null);
+      }
+      fetchAllData();
+    });
+
     fetchAllData();
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email, password) => {
-    // In a real app we'd use Supabase Auth, but to preserve existing flow with SQL tables:
-    const tables = ['Admins', 'Doctor', 'Nurse', 'Receptionist', 'WardBoy', 'Patient'];
-    const emailFields = { Admins: 'Username', Doctor: 'Email', Nurse: 'Email', Receptionist: 'Email', WardBoy: 'Email', Patient: 'Email' };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, message: error.message };
     
-    for (const table of tables) {
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .eq(emailFields[table], email)
-        .eq('PasswordHash', password)
-        .single();
-      
-      if (data && !error) {
-        let role = table.toLowerCase();
-        if (role === 'doctor') role = ROLES.DOCTOR;
-        if (role === 'admins') role = ROLES.ADMIN;
-        
-        const userToSave = { 
-          id: data.Adminid || data.Docid || data.Pid || data.Nurseid || data.Repid || data.WardBid,
-          name: data.Name || data.PName || data.NurseName || data.WardBName || data.Username,
-          email: email,
-          role: role,
-          departmentId: data.Depid
-        };
-        setUser(userToSave);
-        localStorage.setItem('caresphere_current_user', JSON.stringify(userToSave));
-        return { success: true };
-      }
-    }
-    return { success: false, message: 'Invalid credentials' };
+    // session change listener will handle state
+    return { success: true };
   };
 
   const signup = async (userData) => {
-    const { data, error } = await supabase.from('Patient').insert([{
+    // 1. Supabase Auth Signup
+    const { data: authData, error: authError } = await supabase.auth.signUp({ 
+      email: userData.email, 
+      password: userData.password 
+    });
+
+    if (authError) return { success: false, message: authError.message };
+
+    // 2. Create Patient Profile
+    const { error: profileError } = await supabase.from('Patient').insert([{
       PName: userData.name,
       Email: userData.email,
-      PasswordHash: userData.password,
       Gender: userData.gender,
       DOB: userData.dob,
       PhoneNo: userData.phone,
@@ -135,35 +163,20 @@ export const AuthProvider = ({ children }) => {
       BloodGroup: userData.bloodGroup,
       EmergencyPhoneNo: userData.emergencyPhone,
       Disease: userData.disease
-    }]).select().single();
+    }]);
 
-    if (error) return { success: false, message: error.message };
+    if (profileError) {
+        // We might want to warn the user but the account is created.
+        return { success: true, message: 'Account created, but profile failed' };
+    }
 
-    const newUser = {
-      id: data.Pid,
-      name: data.PName,
-      email: data.Email,
-      role: ROLES.PATIENT
-    };
-    
-    setUser(newUser);
-    localStorage.setItem('caresphere_current_user', JSON.stringify(newUser));
-    fetchAllData(); // Refresh list
     return { success: true };
   };
 
+  /* The rest of the methods remain same but use fetchAllData to stay in sync */
   const bookAppointment = async (apptData) => {
-    // Map department name to ID
     const { data: dept } = await supabase.from('Departments').select('Depid').eq('DepartmentName', apptData.department).single();
-    
-    await supabase.from('Appointment').insert([{
-      AppointmentDate: apptData.date,
-      Pid: apptData.patientId,
-      Docid: apptData.doctorId || null,
-      Depid: dept?.Depid,
-      Status: 'Pending'
-    }]);
-    
+    await supabase.from('Appointment').insert([{ AppointmentDate: apptData.date, Pid: apptData.patientId, Docid: apptData.doctorId || null, Depid: dept?.Depid }]);
     fetchAllData();
   };
 
@@ -174,54 +187,39 @@ export const AuthProvider = ({ children }) => {
 
   const addUser = async (userData) => {
     let table = '';
-    let payload = { PasswordHash: userData.password, Status: 'Active' };
-
+    let payload = { Status: 'Active' };
     switch (userData.role) {
       case ROLES.DOCTOR: table = 'Doctor'; payload = { ...payload, Name: userData.name, Email: userData.username }; break;
       case ROLES.NURSE: table = 'Nurse'; payload = { ...payload, NurseName: userData.name, Email: userData.username }; break;
       case ROLES.RECEPTIONIST: table = 'Receptionist'; payload = { ...payload, Name: userData.name, Email: userData.username }; break;
       case ROLES.WARDBOY: table = 'WardBoy'; payload = { ...payload, WardBName: userData.name, Email: userData.username }; break;
       case ROLES.PATIENT: table = 'Patient'; payload = { ...payload, PName: userData.name, Email: userData.username }; break;
-      case ROLES.ADMIN: table = 'Admins'; payload = { Username: userData.username, PasswordHash: userData.password, Role: ROLES.ADMIN }; break;
+      case ROLES.ADMIN: table = 'Admins'; payload = { Username: userData.username, Role: ROLES.ADMIN }; break;
       default: return { success: false, message: 'Invalid role' };
     }
-
     const { error } = await supabase.from(table).insert([payload]);
     if (error) return { success: false, message: error.message };
-    
     fetchAllData();
     return { success: true };
   };
 
   const removeUser = async (userToRemove) => {
-    let table = '';
-    let idColumn = '';
-
-    switch (userToRemove.role) {
-      case ROLES.DOCTOR: table = 'Doctor'; idColumn = 'Docid'; break;
-      case ROLES.NURSE: table = 'Nurse'; idColumn = 'Nurseid'; break;
-      case ROLES.RECEPTIONIST: table = 'Receptionist'; idColumn = 'Repid'; break;
-      case ROLES.WARDBOY: table = 'WardBoy'; idColumn = 'WardBid'; break;
-      case ROLES.PATIENT: table = 'Patient'; idColumn = 'Pid'; break;
-      case ROLES.ADMIN: table = 'Admins'; idColumn = 'Adminid'; break;
-      default: return;
-    }
-
-    await supabase.from(table).delete().eq(idColumn, userToRemove.id);
+    const tables = { [ROLES.DOCTOR]: ['Doctor', 'Docid'], [ROLES.NURSE]: ['Nurse', 'Nurseid'], [ROLES.RECEPTIONIST]: ['Receptionist', 'Repid'], [ROLES.WARDBOY]: ['WardBoy', 'WardBid'], [ROLES.PATIENT]: ['Patient', 'Pid'], [ROLES.ADMIN]: ['Admins', 'Adminid'] };
+    const [table, idCol] = tables[userToRemove.role];
+    await supabase.from(table).delete().eq(idCol, userToRemove.id);
     fetchAllData();
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('caresphere_current_user');
   };
 
   return (
     <AuthContext.Provider value={{
       user, users, appointments, applications, wards,
       login, signup, logout, bookAppointment, updateAppointmentStatus, 
-      addUser, removeUser,
-      loading 
+      addUser, removeUser, loading 
     }}>
       {children}
     </AuthContext.Provider>
@@ -229,4 +227,5 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
 
