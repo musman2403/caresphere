@@ -8,6 +8,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
@@ -20,12 +21,13 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     const res = await login(email, password);
-    if (res.success) {
-      navigate('/dashboard');
-    } else {
+    if (!res.success) {
       setError(res.message);
+      setLoading(false);
     }
+    // No navigate here - the useEffect will handle it once the user state is updated in context
   };
 
   return (
@@ -62,8 +64,8 @@ const Login = () => {
 
           {error && <p style={{color: 'red', marginBottom: '15px'}}>{error}</p>}
 
-          <button type="submit" className="submit-btn" style={{marginBottom: '15px'}}>
-            Login
+          <button type="submit" className="submit-btn" disabled={loading} style={{marginBottom: '15px'}}>
+            {loading ? 'Authenticating...' : 'Login'}
           </button>
 
           <p style={{textAlign: 'center'}}>

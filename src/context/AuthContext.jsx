@@ -24,6 +24,8 @@ export const AuthProvider = ({ children }) => {
         .eq(emailFields[table], email)
         .single();
       
+      console.log(`[Auth Debug] Table: ${table}, Data:`, data, 'Error:', error);
+      
       if (data && !error) {
         let role = table.toLowerCase();
         if (role === 'doctor') role = ROLES.DOCTOR;
@@ -136,11 +138,29 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { success: false, message: error.message };
-    
-    // session change listener will handle state
-    return { success: true };
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setLoading(false);
+        return { success: false, message: error.message };
+      }
+      
+      // Wait for the onAuthStateChange listener to set the user profile
+      // or fetch it here directly to be sure
+      const profile = await fetchProfileByEmail(email);
+      if (profile) {
+        setUser(profile);
+      } else {
+        setUser({ email, role: 'unauthorized', name: 'New User' });
+      }
+      
+      return { success: true };
+    } catch (err) {
+      return { success: false, message: 'An unexpected error occurred' };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signup = async (userData) => {
@@ -210,6 +230,16 @@ export const AuthProvider = ({ children }) => {
     fetchAllData();
   };
 
+  const updateUserRole = async (userId, newRole) => {
+    // Note: In this architecture, updating role means moving record between tables, 
+    // which is complex. For now, we update the Role field if it exists.
+    const { error } = await supabase.from('Admins').update({ Role: newRole }).eq('Adminid', userId);
+    if (error) {
+        // Handle other tables if necessary
+    }
+    fetchAllData();
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -219,7 +249,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, users, appointments, applications, wards,
       login, signup, logout, bookAppointment, updateAppointmentStatus, 
-      addUser, removeUser, loading 
+      addUser, removeUser, updateUserRole, loading 
     }}>
       {children}
     </AuthContext.Provider>
@@ -227,5 +257,3 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-
-
