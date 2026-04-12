@@ -356,6 +356,30 @@ export const AuthProvider = ({ children }) => {
     fetchAllData();
   };
 
+  const updateUserDetails = async (userId, role, details) => {
+    let table = '';
+    let idCol = '';
+    
+    switch (role) {
+      case ROLES.DOCTOR: table = 'doctor'; idCol = 'docid'; break;
+      case ROLES.NURSE: table = 'nurse'; idCol = 'nurseid'; break;
+      case ROLES.RECEPTIONIST: table = 'receptionist'; idCol = 'repid'; break;
+      case ROLES.WARDBOY: table = 'wardboy'; idCol = 'wardbid'; break;
+      case ROLES.PATIENT: table = 'patient'; idCol = 'pid'; break;
+      case ROLES.ADMIN: return { success: false, message: 'Admins do not have extended details.' };
+      default: return { success: false, message: 'Invalid role' };
+    }
+
+    const { error } = await supabase.from(table).update(details).eq(idCol, userId);
+    if (error) {
+      console.error('[UpdateUserDetails] Error:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    fetchAllData();
+    return { success: true };
+  };
+
   const addDepartment = async (name) => {
     const { error } = await supabase.from('departments').insert([{ departmentname: name }]);
     if (error) return { success: false, message: error.message };
@@ -404,7 +428,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, users, appointments, applications, wards, departments,
       login, signup, logout, bookAppointment, updateAppointmentStatus, 
-      addUser, removeUser, updateUserRole, addDepartment, addWard, updateWardBeds, loading,
+      addUser, removeUser, updateUserRole, updateUserDetails, addDepartment, addWard, updateWardBeds, loading,
       submitApplication, approveApplication, rejectApplication
     }}>
       {children}
