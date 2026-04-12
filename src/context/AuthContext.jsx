@@ -254,7 +254,7 @@ export const AuthProvider = ({ children }) => {
   const bookAppointment = async (apptData) => {
     const { data: dept } = await supabase.from('departments').select('depid').eq('departmentname', apptData.department).single();
     await supabase.from('appointment').insert([{ appointmentdate: apptData.date, pid: apptData.patientId, docid: apptData.doctorId || null, depid: dept?.depid }]);
-    fetchAllData();
+    await fetchAllData();
   };
 
   const submitApplication = async (formData) => {
@@ -282,17 +282,17 @@ export const AuthProvider = ({ children }) => {
 
   const approveApplication = async (appId) => {
     const { error } = await supabase.from('applications').update({ status: 'Approved' }).eq('id', appId);
-    if (!error) fetchAllData();
+    if (!error) await fetchAllData();
   };
 
   const rejectApplication = async (appId) => {
     const { error } = await supabase.from('applications').update({ status: 'Rejected' }).eq('id', appId);
-    if (!error) fetchAllData();
+    if (!error) await fetchAllData();
   };
 
   const updateAppointmentStatus = async (appointmentId, newStatus) => {
     await supabase.from('appointment').update({ status: newStatus }).eq('apid', appointmentId);
-    fetchAllData();
+    await fetchAllData();
   };
 
   const addUser = async (userData) => {
@@ -339,7 +339,7 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: `Failed to create database profile: ${error.message}` };
     }
     
-    fetchAllData();
+    await fetchAllData();
     return { success: true, message: 'User added successfully!' };
   };
 
@@ -347,13 +347,13 @@ export const AuthProvider = ({ children }) => {
     const tables = { [ROLES.DOCTOR]: ['doctor', 'docid'], [ROLES.NURSE]: ['nurse', 'nurseid'], [ROLES.RECEPTIONIST]: ['receptionist', 'repid'], [ROLES.WARDBOY]: ['wardboy', 'wardbid'], [ROLES.PATIENT]: ['patient', 'pid'], [ROLES.ADMIN]: ['admins', 'adminid'] };
     const [table, idCol] = tables[userToRemove.role];
     await supabase.from(table).delete().eq(idCol, userToRemove.id);
-    fetchAllData();
+    await fetchAllData();
   };
 
   const updateUserRole = async (userId, newRole) => {
     const { error } = await supabase.from('admins').update({ role: newRole }).eq('adminid', userId);
     if (error) console.error('updateUserRole error:', error.message);
-    fetchAllData();
+    await fetchAllData();
   };
 
   const updateUserDetails = async (userId, role, details) => {
@@ -376,46 +376,78 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: error.message };
     }
     
-    fetchAllData();
+    await fetchAllData();
     return { success: true };
   };
 
   const addDepartment = async (name) => {
     const { error } = await supabase.from('departments').insert([{ departmentname: name }]);
     if (error) return { success: false, message: error.message };
-    fetchAllData();
+    await fetchAllData();
     return { success: true };
   };
 
   const addWard = async (wardNo, depid, totalBeds) => {
-    const { error } = await supabase.from('ward').insert([{
+    const { data, error } = await supabase.from('ward').insert([{
       wardno: wardNo,
       depid: depid,
       totalbeds: totalBeds,
       availablebeds: totalBeds
-    }]);
+    }]).select();
     if (error) return { success: false, message: error.message };
-    fetchAllData();
+    if (!data || data.length === 0) return { success: false, message: 'Operation blocked by database policies.' };
+    await fetchAllData();
     return { success: true };
   };
 
   const updateWardBeds = async (wardId, addedBeds) => {
-    // addedBeds can be positive (add) or negative (remove)
     const ward = wards.find(w => w.id === wardId);
     if (!ward) return { success: false, message: 'Ward not found' };
     
-    const newTotal = ward.totalBeds + addedBeds;
-    const newAvailable = ward.availableBeds + addedBeds;
+    const newTotal = Number(ward.totalBeds) + addedBeds;
+    const newAvailable = Number(ward.availableBeds) + addedBeds;
     
     if (newTotal < 0 || newAvailable < 0) return { success: false, message: 'Cannot reduce beds below 0' };
 
-    const { error } = await supabase.from('ward').update({ 
+    const { data, error } = await supabase.from('ward').update({ 
       totalbeds: newTotal,
       availablebeds: newAvailable 
-    }).eq('wardid', wardId);
+    }).eq('wardid', wardId).select();
 
     if (error) return { success: false, message: error.message };
-    fetchAllData();
+    if (!data || data.length === 0) return { success: false, message: 'Operation blocked by database. Please check Supabase RLS policies.' };
+    await fetchAllData();
+    return { success: true };
+  };
+
+  const deleteWard = async (wardId) => {
+    const { data, error } = await supabase.from('ward').delete().eq('wardid', wardId).select();
+    if (error) return { success: false, message: error.message };
+    if (!data || data.length === 0) return { success: false, message: 'Operation blocked by database. Please check Supabase RLS policies.' };
+    await fetchAllData();
+    return { success: true };
+  };
+
+  const updateWard = async (wardId, updatedData) => {
+    const payload = {
+      wardno: updatedData.wardNo,
+      depid: updatedData.depid ? parseInt(updatedData.depid) : null,
+      totalbeds: parseInt(updatedData.totalBeds),
+      availablebeds: parseInt(updatedData.availableBeds)
+    };
+
+    const { data, error } = await supabase.from('ward').update(payload).eq('wardid', wardId).select();
+    
+    if (error) return { success: false, message: error.message };
+    if (!data || data.length === 0) return { success: false, message: 'Operation blocked by database. Please check Supabase RLS policies.' };
+    await fetchAllData();
+    return { success: true };
+  };
+
+  const deleteApplication = async (applicationId) => {
+    const { error } = await supabase.from('applications').delete().eq('id', applicationId);
+    if (error) return { success: false, message: error.message };
+    await fetchAllData();
     return { success: true };
   };
 
@@ -428,8 +460,8 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, users, appointments, applications, wards, departments,
       login, signup, logout, bookAppointment, updateAppointmentStatus, 
-      addUser, removeUser, updateUserRole, updateUserDetails, addDepartment, addWard, updateWardBeds, loading,
-      submitApplication, approveApplication, rejectApplication
+      addUser, removeUser, updateUserRole, updateUserDetails, addDepartment, addWard, updateWard, updateWardBeds, deleteWard, loading,
+      submitApplication, approveApplication, rejectApplication, deleteApplication
     }}>
       {children}
     </AuthContext.Provider>

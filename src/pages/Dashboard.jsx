@@ -47,10 +47,42 @@ const Dashboard = () => {
 /* Role Specific Views */
 
 const AdminView = () => {
-  const { users, appointments, updateAppointmentStatus, applications, approveApplication, rejectApplication, wards } = useAuth();
+  const { users, appointments, updateAppointmentStatus, applications, approveApplication, rejectApplication, deleteApplication, wards } = useAuth();
+  const [selectedApp, setSelectedApp] = useState(null);
   
   return (
   <div>
+    {selectedApp && (
+      <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000}}>
+        <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '500px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+            <h3 style={{margin: 0, color: '#112A46'}}>Application Details</h3>
+            <button onClick={() => setSelectedApp(null)} style={{background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer'}}>&times;</button>
+          </div>
+          <p><strong>Name:</strong> {selectedApp.name}</p>
+          <p><strong>Email:</strong> {selectedApp.email}</p>
+          <p><strong>Role:</strong> <span style={{textTransform: 'capitalize'}}>{selectedApp.role}</span></p>
+          <p><strong>Department:</strong> {selectedApp.department || 'N/A'}</p>
+          <p><strong>License Number:</strong> {selectedApp.licensenumber || 'N/A'}</p>
+          <p><strong>Years Experience:</strong> {selectedApp.yearsexperience || '0'}</p>
+          <p><strong>Shift Preference:</strong> {selectedApp.shiftpreference || 'N/A'}</p>
+          <p><strong>Languages:</strong> {selectedApp.languages || 'N/A'}</p>
+          <div style={{marginTop: '20px'}}>
+            <strong>Cover Letter:</strong>
+            <p style={{background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', whiteSpace: 'pre-wrap', marginTop: '10px'}}>{selectedApp.coverletter || 'No cover letter provided.'}</p>
+          </div>
+          <div style={{display: 'flex', gap: '10px', marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px'}}>
+            {selectedApp.status === 'Pending' && (
+              <>
+                <button className="action-btn primary" onClick={() => { approveApplication(selectedApp.id); setSelectedApp(null); }}>Approve</button>
+                <button className="action-btn danger" onClick={() => { rejectApplication(selectedApp.id); setSelectedApp(null); }}>Reject</button>
+              </>
+            )}
+            <button className="action-btn" style={{backgroundColor: '#e2e8f0', color: '#334155'}} onClick={() => setSelectedApp(null)}>Close</button>
+          </div>
+        </div>
+      </div>
+    )}
     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
       <h3 style={{color: '#112A46', margin: 0, fontSize: '1.6rem'}}>Admin Control Center</h3>
       <Link to="/users">
@@ -61,15 +93,20 @@ const AdminView = () => {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
       <StatCard title="Total Staff" value={users.filter(u => u.role !== ROLES.PATIENT).length.toString()} />
       <StatCard title="Active Wards" value={wards.length.toString()} />
-      <StatCard title="Total Waitlist" value={applications.length.toString()} color="#00b4db" />
+      <StatCard title="Pending Waitlist" value={applications.filter(a => a.status === 'Pending').length.toString()} color="#00b4db" />
     </div>
     
     <WardDataDisplay canEdit={true} />
 
     <div style={{ marginTop: '40px' }}>
-      <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>Pending Staff Applications</h4>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px', marginBottom: '0'}}>
+        <h4 style={{color: '#112A46', fontSize: '1.4rem', margin: 0}}>Staff Applications</h4>
+        <span style={{fontSize: '0.85rem', color: '#888'}}>
+          {applications.filter(a => a.status === 'Pending').length} pending · {applications.length} total
+        </span>
+      </div>
       {applications.length === 0 ? (
-          <p style={{color: '#888', marginTop: '20px'}}>No pending applications in the queue.</p>
+          <p style={{color: '#888', marginTop: '20px'}}>No applications in the queue.</p>
       ) : (
           <div className="sleek-table-container">
             <table className="sleek-table">
@@ -84,7 +121,7 @@ const AdminView = () => {
               </thead>
               <tbody>
                 {applications.map(app => (
-                  <tr key={app.id}>
+                  <tr key={app.id} style={{cursor: 'pointer'}} onClick={() => setSelectedApp(app)} title="Click to view details">
                     <td style={{fontWeight: '500'}}>{app.name}</td>
                     <td style={{textTransform:'capitalize'}}>{app.role}</td>
                     <td>{app.department || 'N/A'}</td>
@@ -96,14 +133,18 @@ const AdminView = () => {
                         {app.status}
                       </span>
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       {app.status === 'Pending' ? (
                         <div style={{display: 'flex', gap: '8px'}}>
                           <button className="action-btn primary" onClick={() => approveApplication(app.id)}>Approve</button>
                           <button className="action-btn danger" onClick={() => rejectApplication(app.id)}>Reject</button>
+                          <button className="action-btn" style={{backgroundColor: '#f1f5f9', color: '#64748b'}} onClick={() => { if(window.confirm('Remove this application?')) deleteApplication(app.id); }}>Remove</button>
                         </div>
                       ) : (
-                        <span style={{color: '#aaa'}}>-</span>
+                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                          <span style={{color: '#aaa'}}>-</span>
+                          <button className="action-btn" style={{backgroundColor: '#f1f5f9', color: '#64748b', padding: '5px 10px', fontSize: '0.8rem'}} onClick={() => { if(window.confirm('Remove this application from the list?')) deleteApplication(app.id); }}>Remove</button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -170,37 +211,79 @@ const ReceptionistView = () => {
   </div>
   );
 };
-
 const WardDataDisplay = ({ canEdit = false }) => {
-    const { wards, departments, addDepartment, addWard, updateWardBeds } = useAuth();
+    const { wards, departments, addDepartment, addWard, updateWardBeds, updateWard, deleteWard } = useAuth();
     const [newDeptName, setNewDeptName] = useState('');
     const [newWard, setNewWard] = useState({ wardNo: '', depid: '', totalBeds: 10 });
+    const [editingWardId, setEditingWardId] = useState(null);
+    const [editFormData, setEditFormData] = useState({ wardNo: '', depid: '', totalBeds: 10, availableBeds: 10 });
 
     const handleAddDept = async (e) => {
       e.preventDefault();
       const res = await addDepartment(newDeptName);
-      if (res.success) {
-        setNewDeptName('');
-        alert('Department added!');
-      } else {
-        alert('Error: ' + res.message);
-      }
+      if (res.success) { setNewDeptName(''); alert('Department added!'); }
+      else alert('Error: ' + res.message);
     };
 
     const handleAddWard = async (e) => {
       e.preventDefault();
       const res = await addWard(newWard.wardNo, newWard.depid, parseInt(newWard.totalBeds));
-      if (res.success) {
-        setNewWard({ wardNo: '', depid: '', totalBeds: 10 });
-        alert('Ward added!');
-      } else {
-        alert('Error: ' + res.message);
+      if (res.success) { setNewWard({ wardNo: '', depid: '', totalBeds: 10 }); alert('Ward added!'); }
+      else alert('Error: ' + res.message);
+    };
+
+    const handleBedChange = async (ward, delta) => {
+      try {
+        const res = await updateWardBeds(ward.id, delta);
+        if (!res?.success) alert('Error: ' + res?.message);
+      } catch (err) {
+        console.error(err);
+        alert('An unexpected error occurred.');
       }
+    };
+
+    const handleRemoveWard = async (ward) => {
+      if (!window.confirm(`Remove Ward ${ward.wardNo || ward.id}? This cannot be undone.`)) return;
+      try {
+        const res = await deleteWard(ward.id);
+        if (!res?.success) alert('Error: ' + res?.message);
+      } catch (err) {
+        console.error(err);
+        alert('An unexpected error occurred.');
+      }
+    };
+
+    const handleEditClick = (ward) => {
+      setEditingWardId(ward.id);
+      setEditFormData({
+        wardNo: ward.wardNo || '',
+        depid: ward.departmentId || '',
+        totalBeds: ward.totalBeds,
+        availableBeds: ward.availableBeds
+      });
+    };
+
+    const handleSaveEdit = async (wardId) => {
+      try {
+        const res = await updateWard(wardId, editFormData);
+        if (!res?.success) {
+          alert('Error: ' + res?.message);
+        } else {
+          setEditingWardId(null);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An unexpected error occurred.');
+      }
+    };
+
+    const handleCancelEdit = () => {
+      setEditingWardId(null);
     };
 
     return (
         <div style={{ marginTop: '30px' }}>
-            <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>Ward & Facility Overview</h4>
+            <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>Ward &amp; Facility Overview</h4>
             
             {canEdit && (
               <div style={{ display: 'flex', gap: '30px', margin: '20px 0', flexWrap: 'wrap' }}>
@@ -214,7 +297,7 @@ const WardDataDisplay = ({ canEdit = false }) => {
                   </form>
                 </div>
                 <div style={{ flex: '1', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h5 style={{color: '#334155', marginBottom: '15px'}}>Add Ward</h5>
+                  <h5 style={{color: '#334155', marginBottom: '15px'}}>Add New Ward</h5>
                   <form onSubmit={handleAddWard} style={{ margin: 0, padding: 0, boxShadow: 'none', background: 'transparent', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <input type="text" placeholder="Ward No (E-102)" value={newWard.wardNo} onChange={e => setNewWard({...newWard, wardNo: e.target.value})} required style={{margin: 0}} />
                     <select value={newWard.depid} onChange={e => setNewWard({...newWard, depid: e.target.value})} required style={{margin: 0}}>
@@ -238,32 +321,93 @@ const WardDataDisplay = ({ canEdit = false }) => {
                           <th>Department</th>
                           <th>Total Beds</th>
                           <th>Available Beds</th>
-                          {canEdit && <th>Manage Capacity</th>}
+                          {canEdit && <th>Manage Beds</th>}
+                          {canEdit && <th>Actions</th>}
                       </tr>
                   </thead>
                   <tbody>
                       {(wards || []).map(ward => (
                            <tr key={ward.id}>
-                              <td style={{fontWeight: '500', color: '#112A46'}}>{ward.wardNo || 'N/A'}</td>
-                              <td>{ward.department}</td>
-                              <td>{ward.totalBeds}</td>
-                              <td>
-                                <span className="status-badge" style={{ backgroundColor: ward.availableBeds === 0 ? '#fee2e2' : '#dcfce7', color: ward.availableBeds === 0 ? '#dc2626' : '#16a34a' }}>
-                                  {ward.availableBeds} Available
-                                </span>
-                              </td>
-                              {canEdit && (
-                                <td>
-                                  <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button className="action-btn primary" onClick={() => updateWardBeds(ward.id, 1)}>Add Bed</button>
-                                    <button className="action-btn danger" onClick={() => updateWardBeds(ward.id, -1)} disabled={ward.totalBeds === 0 || ward.availableBeds === 0}>Remove Bed</button>
-                                  </div>
-                                </td>
+                              {editingWardId === ward.id ? (
+                                <>
+                                  <td><input type="text" value={editFormData.wardNo} onChange={e => setEditFormData({...editFormData, wardNo: e.target.value})} style={{margin:0, width: '80px', padding: '5px'}}/></td>
+                                  <td>
+                                    <select value={editFormData.depid} onChange={e => setEditFormData({...editFormData, depid: e.target.value})} style={{margin:0, padding: '5px'}}>
+                                      <option value="">Select Dept</option>
+                                      {(departments || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </select>
+                                  </td>
+                                  <td><input type="number" value={editFormData.totalBeds} onChange={e => setEditFormData({...editFormData, totalBeds: e.target.value})} style={{margin:0, width: '60px', padding: '5px'}}/></td>
+                                  <td><input type="number" value={editFormData.availableBeds} onChange={e => setEditFormData({...editFormData, availableBeds: e.target.value})} style={{margin:0, width: '60px', padding: '5px'}}/></td>
+                                  {canEdit && (
+                                    <td colSpan="2">
+                                      <div style={{display: 'flex', gap: '5px'}}>
+                                        <button className="action-btn primary" style={{padding: '5px 10px'}} onClick={() => handleSaveEdit(ward.id)}>Save</button>
+                                        <button className="action-btn" style={{padding: '5px 10px', backgroundColor: '#f1f5f9', color: '#64748b'}} onClick={handleCancelEdit}>Cancel</button>
+                                      </div>
+                                    </td>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <td style={{fontWeight: '500', color: '#112A46'}}>{ward.wardNo || 'N/A'}</td>
+                                  <td>{ward.department}</td>
+                                  <td>{ward.totalBeds}</td>
+                                  <td>
+                                    <span className="status-badge" style={{ backgroundColor: ward.availableBeds === 0 ? '#fee2e2' : '#dcfce7', color: ward.availableBeds === 0 ? '#dc2626' : '#16a34a' }}>
+                                      {ward.availableBeds} Available
+                                    </span>
+                                  </td>
+                                  {canEdit && (
+                                    <td>
+                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                        <button
+                                          type="button"
+                                          className="action-btn danger"
+                                          style={{padding: '4px 10px', fontSize: '1.1rem', lineHeight: '1'}}
+                                          onClick={() => handleBedChange(ward, -1)}
+                                          disabled={Number(ward.totalBeds) <= 0 || Number(ward.availableBeds) <= 0}
+                                          title="Remove one bed"
+                                        >−</button>
+                                        <span style={{minWidth: '24px', textAlign: 'center', fontWeight: '600'}}>{ward.totalBeds}</span>
+                                        <button
+                                          type="button"
+                                          className="action-btn primary"
+                                          style={{padding: '4px 10px', fontSize: '1.1rem', lineHeight: '1'}}
+                                          onClick={() => handleBedChange(ward, 1)}
+                                          title="Add one bed"
+                                        >+</button>
+                                      </div>
+                                    </td>
+                                  )}
+                                  {canEdit && (
+                                    <td>
+                                      <div style={{ display: 'flex', gap: '5px' }}>
+                                        <button
+                                          type="button"
+                                          className="action-btn primary"
+                                          style={{padding: '5px 10px', fontSize: '0.85rem'}}
+                                          onClick={() => handleEditClick(ward)}
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="action-btn danger"
+                                          style={{padding: '5px 10px', fontSize: '0.85rem'}}
+                                          onClick={() => handleRemoveWard(ward)}
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    </td>
+                                  )}
+                                </>
                               )}
                           </tr>
                       ))}
                       {(wards || []).length === 0 && (
-                        <tr><td colSpan={canEdit ? "5" : "4"} style={{textAlign: 'center', color: '#888'}}>No ward data available. Adjusting hospital setup...</td></tr>
+                        <tr><td colSpan={canEdit ? "6" : "4"} style={{textAlign: 'center', color: '#888'}}>No ward data available. Add a ward above.</td></tr>
                       )}
                   </tbody>
               </table>
