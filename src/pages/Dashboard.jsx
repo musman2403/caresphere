@@ -65,7 +65,7 @@ const AdminView = () => {
       <StatCard title="Waitlist" value={applications.length.toString()} />
     </div>
     
-    <WardDataDisplay wards={wards} />
+    <WardDataDisplay canEdit={true} />
 
     <div style={{ marginTop: '30px' }}>
       <h4>Pending Staff Applications</h4>
@@ -156,7 +156,7 @@ const ReceptionistView = () => {
       <StatCard title="Pending Appts" value={appointments.filter(a => a.status === 'Pending').length.toString()} />
     </div>
 
-    <WardDataDisplay wards={wards} />
+    <WardDataDisplay canEdit={true} />
     
     <div style={{ marginTop: '30px' }}>
       <h4>All Appointments</h4>
@@ -166,28 +166,92 @@ const ReceptionistView = () => {
   );
 };
 
-const WardDataDisplay = ({ wards = [] }) => {
+const WardDataDisplay = ({ canEdit = false }) => {
+    const { wards, departments, addDepartment, addWard, updateWardBeds } = useAuth();
+    const [newDeptName, setNewDeptName] = useState('');
+    const [newWard, setNewWard] = useState({ wardNo: '', depid: '', totalBeds: 10 });
+
+    const handleAddDept = async (e) => {
+      e.preventDefault();
+      const res = await addDepartment(newDeptName);
+      if (res.success) {
+        setNewDeptName('');
+        alert('Department added!');
+      } else {
+        alert('Error: ' + res.message);
+      }
+    };
+
+    const handleAddWard = async (e) => {
+      e.preventDefault();
+      const res = await addWard(newWard.wardNo, newWard.depid, parseInt(newWard.totalBeds));
+      if (res.success) {
+        setNewWard({ wardNo: '', depid: '', totalBeds: 10 });
+        alert('Ward added!');
+      } else {
+        alert('Error: ' + res.message);
+      }
+    };
+
     return (
         <div style={{ marginTop: '20px' }}>
-            <h4>Ward Availability Overview</h4>
+            <h4>Ward & Facility Overview</h4>
+            
+            {canEdit && (
+              <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', minWidth: '300px' }}>
+                  <h5>Add Department</h5>
+                  <form onSubmit={handleAddDept} style={{ display: 'flex', gap: '10px' }}>
+                    <input type="text" placeholder="Department Name" value={newDeptName} onChange={e => setNewDeptName(e.target.value)} required />
+                    <button type="submit">Add</button>
+                  </form>
+                </div>
+                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', minWidth: '300px' }}>
+                  <h5>Add Ward</h5>
+                  <form onSubmit={handleAddWard} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <input type="text" placeholder="Ward No (e.g., E-102)" value={newWard.wardNo} onChange={e => setNewWard({...newWard, wardNo: e.target.value})} required />
+                    <select value={newWard.depid} onChange={e => setNewWard({...newWard, depid: e.target.value})} required>
+                      <option value="">Select Department</option>
+                      {(departments || []).map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                    <input type="number" placeholder="Total Beds" value={newWard.totalBeds} onChange={e => setNewWard({...newWard, totalBeds: e.target.value})} required min="1" />
+                    <button type="submit">Add Ward</button>
+                  </form>
+                </div>
+              </div>
+            )}
+
             <table>
                 <thead>
                     <tr>
+                        <th>Ward No</th>
                         <th>Department</th>
                         <th>Total Beds</th>
                         <th>Available Beds</th>
+                        {canEdit && <th>Manage Beds</th>}
                     </tr>
                 </thead>
                 <tbody>
-                    {wards.map(ward => (
+                    {(wards || []).map(ward => (
                          <tr key={ward.id}>
+                            <td>{ward.wardNo || 'N/A'}</td>
                             <td>{ward.department}</td>
                             <td>{ward.totalBeds}</td>
-                            <td>{ward.availableBeds}</td>
+                            <td><strong style={{color: ward.availableBeds === 0 ? 'red' : 'green'}}>{ward.availableBeds}</strong></td>
+                            {canEdit && (
+                              <td>
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                  <button onClick={() => updateWardBeds(ward.id, 1)} style={{ padding: '4px 8px' }}>+1</button>
+                                  <button onClick={() => updateWardBeds(ward.id, -1)} style={{ padding: '4px 8px', backgroundColor: '#dc3545' }} disabled={ward.totalBeds === 0 || ward.availableBeds === 0}>-1</button>
+                                </div>
+                              </td>
+                            )}
                         </tr>
                     ))}
-                    {wards.length === 0 && (
-                      <tr><td colSpan="3">No ward data available. Adjusting hospital setup...</td></tr>
+                    {(wards || []).length === 0 && (
+                      <tr><td colSpan={canEdit ? "5" : "4"}>No ward data available. Adjusting hospital setup...</td></tr>
                     )}
                 </tbody>
             </table>

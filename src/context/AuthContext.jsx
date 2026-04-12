@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [appointments, setAppointments] = useState([]);
   const [applications, setApplications] = useState([]); 
   const [wards, setWards] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   // Ref to prevent double-fetching profile when login() and onAuthStateChange fire together
   const isFetchingProfile = useRef(false);
@@ -112,9 +113,17 @@ export const AuthProvider = ({ children }) => {
       const { data: wardData } = await supabase.from('ward').select('*, departments(departmentname)');
       setWards((wardData || []).map(w => ({
         id: w.wardid,
+        wardNo: w.wardno,
         department: w.departments?.departmentname,
+        departmentId: w.depid,
         totalBeds: w.totalbeds,
         availableBeds: w.availablebeds
+      })));
+
+      // 4. Set Departments
+      setDepartments((depts || []).map(d => ({
+        id: d.depid,
+        name: d.departmentname
       })));
 
     } catch (err) {
@@ -308,6 +317,45 @@ export const AuthProvider = ({ children }) => {
     fetchAllData();
   };
 
+  const addDepartment = async (name) => {
+    const { error } = await supabase.from('departments').insert([{ departmentname: name }]);
+    if (error) return { success: false, message: error.message };
+    fetchAllData();
+    return { success: true };
+  };
+
+  const addWard = async (wardNo, depid, totalBeds) => {
+    const { error } = await supabase.from('ward').insert([{
+      wardno: wardNo,
+      depid: depid,
+      totalbeds: totalBeds,
+      availablebeds: totalBeds
+    }]);
+    if (error) return { success: false, message: error.message };
+    fetchAllData();
+    return { success: true };
+  };
+
+  const updateWardBeds = async (wardId, addedBeds) => {
+    // addedBeds can be positive (add) or negative (remove)
+    const ward = wards.find(w => w.id === wardId);
+    if (!ward) return { success: false, message: 'Ward not found' };
+    
+    const newTotal = ward.totalBeds + addedBeds;
+    const newAvailable = ward.availableBeds + addedBeds;
+    
+    if (newTotal < 0 || newAvailable < 0) return { success: false, message: 'Cannot reduce beds below 0' };
+
+    const { error } = await supabase.from('ward').update({ 
+      totalbeds: newTotal,
+      availablebeds: newAvailable 
+    }).eq('wardid', wardId);
+
+    if (error) return { success: false, message: error.message };
+    fetchAllData();
+    return { success: true };
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -315,9 +363,9 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, users, appointments, applications, wards,
+      user, users, appointments, applications, wards, departments,
       login, signup, logout, bookAppointment, updateAppointmentStatus, 
-      addUser, removeUser, updateUserRole, loading 
+      addUser, removeUser, updateUserRole, addDepartment, addWard, updateWardBeds, loading 
     }}>
       {children}
     </AuthContext.Provider>
