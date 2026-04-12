@@ -126,6 +126,12 @@ export const AuthProvider = ({ children }) => {
         name: d.departmentname
       })));
 
+      // 5. Fetch Applications (if table exists)
+      const { data: appsData, error: appsError } = await supabase.from('applications').select('*');
+      if (!appsError && appsData) {
+        setApplications(appsData);
+      }
+
     } catch (err) {
       console.error("Error fetching data:", err);
     }
@@ -251,6 +257,34 @@ export const AuthProvider = ({ children }) => {
     fetchAllData();
   };
 
+  const submitApplication = async (formData) => {
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      role: formData.role,
+      department: formData.department,
+      status: 'Pending'
+    };
+    const { error } = await supabase.from('applications').insert([payload]);
+    if (error) {
+      console.error('submitApplication error:', error.message);
+      // Fallback: Temporarily hold in memory if table doesn't exist yet
+      setApplications(prev => [...prev, { ...payload, id: Date.now() }]);
+    } else {
+      fetchAllData();
+    }
+  };
+
+  const approveApplication = async (appId) => {
+    const { error } = await supabase.from('applications').update({ status: 'Approved' }).eq('id', appId);
+    if (!error) fetchAllData();
+  };
+
+  const rejectApplication = async (appId) => {
+    const { error } = await supabase.from('applications').update({ status: 'Rejected' }).eq('id', appId);
+    if (!error) fetchAllData();
+  };
+
   const updateAppointmentStatus = async (appointmentId, newStatus) => {
     await supabase.from('appointment').update({ status: newStatus }).eq('apid', appointmentId);
     fetchAllData();
@@ -365,7 +399,8 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, users, appointments, applications, wards, departments,
       login, signup, logout, bookAppointment, updateAppointmentStatus, 
-      addUser, removeUser, updateUserRole, addDepartment, addWard, updateWardBeds, loading 
+      addUser, removeUser, updateUserRole, addDepartment, addWard, updateWardBeds, loading,
+      submitApplication, approveApplication, rejectApplication
     }}>
       {children}
     </AuthContext.Provider>
