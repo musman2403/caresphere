@@ -18,10 +18,16 @@ const Users = () => {
     return false;
   });
 
-  const handleCreateUser = (e) => {
+  const handleCreateUser = async (e) => {
     e.preventDefault();
-    addUser(formData);
-    setFormData({ name: '', username: '', password: '', role: ROLES.PATIENT });
+    const result = await addUser(formData);
+    
+    if (result.success) {
+      alert('Success: ' + result.message);
+      setFormData({ name: '', username: '', password: '', role: ROLES.PATIENT });
+    } else {
+      alert('Error: ' + result.message);
+    }
   };
 
   const handleRoleChange = (userId, newRole) => {

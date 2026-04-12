@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { ROLES } from '../dummyData';
 import { supabase } from '../supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 
 const AuthContext = createContext();
 
@@ -247,21 +248,51 @@ export const AuthProvider = ({ children }) => {
   };
 
   const addUser = async (userData) => {
+    // 1. Create user in Supabase Auth using a temporary client
+    // so it doesn't log the active admin out.
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mgcepqktrhmuuabqqbsp.supabase.co';
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_a5GzMp5gycCMKI_BRI5GMA_9rBkog7e';
+    
+    const adminAuthClient = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      }
+    });
+
+    const { error: authError } = await adminAuthClient.auth.signUp({
+      email: userData.username, // In Users.jsx, the 'username' field represents the element's email 
+      password: userData.password
+    });
+
+    if (authError) {
+      console.error('[AddUser] Auth error:', authError.message);
+      return { success: false, message: `Failed to create auth account: ${authError.message}` };
+    }
+
+    // 2. Insert into the appropriate DB table
     let table = '';
     let payload = { status: 'Active' };
     switch (userData.role) {
-      case ROLES.DOCTOR: table = 'doctor'; payload = { ...payload, name: userData.name, email: userData.username }; break;
-      case ROLES.NURSE: table = 'nurse'; payload = { ...payload, nursename: userData.name, email: userData.username }; break;
-      case ROLES.RECEPTIONIST: table = 'receptionist'; payload = { ...payload, name: userData.name, email: userData.username }; break;
-      case ROLES.WARDBOY: table = 'wardboy'; payload = { ...payload, wardbname: userData.name, email: userData.username }; break;
+      case ROLES.DOCTOR: table = 'doctor'; payload = { ...payload, name: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.NURSE: table = 'nurse'; payload = { ...payload, nursename: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.RECEPTIONIST: table = 'receptionist'; payload = { ...payload, name: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.WARDBOY: table = 'wardboy'; payload = { ...payload, wardbname: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
       case ROLES.PATIENT: table = 'patient'; payload = { ...payload, pname: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
       case ROLES.ADMIN: table = 'admins'; payload = { username: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH', role: ROLES.ADMIN }; break;
       default: return { success: false, message: 'Invalid role' };
     }
+    
+    // Using the primary client (with admin session) to insert the role record
     const { error } = await supabase.from(table).insert([payload]);
-    if (error) return { success: false, message: error.message };
+    if (error) {
+      console.error('[AddUser] DB error:', error.message);
+      return { success: false, message: `Failed to create database profile: ${error.message}` };
+    }
+    
     fetchAllData();
-    return { success: true };
+    return { success: true, message: 'User added successfully!' };
   };
 
   const removeUser = async (userToRemove) => {
