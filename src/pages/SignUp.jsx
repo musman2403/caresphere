@@ -18,16 +18,23 @@ const SignUp = () => {
     emergencyPhone: '',
     disease: ''
   });
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+    setIsSubmitting(true);
     const res = await signup(formData);
+    setIsSubmitting(false);
     if (res.success) {
-      navigate('/dashboard');
+      setSuccessMsg(res.message || 'Account created! Please check your email to verify your account, then log in.');
     } else {
-      alert(res.message);
+      setErrorMsg(res.message || 'Signup failed. Please try again.');
     }
   };
 
@@ -100,8 +107,11 @@ const SignUp = () => {
             <input type="text" value={formData.disease} onChange={(e) => setFormData({...formData, disease: e.target.value})} placeholder="e.g. Asthma..." />
           </div>
 
-          <button type="submit" className="submit-btn" style={{gridColumn: '1 / -1', marginTop: '10px'}}>
-            Register Patient Account
+          {successMsg && <p style={{gridColumn: '1 / -1', color: '#4dff91', background: 'rgba(77,255,145,0.1)', border: '1px solid rgba(77,255,145,0.3)', padding: '12px', borderRadius: '8px', textAlign: 'center'}}>{successMsg} <Link to="/login" style={{color: '#00b4db', fontWeight: 'bold'}}>Login now →</Link></p>}
+          {errorMsg && <p style={{gridColumn: '1 / -1', color: '#ff4d4d', background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', padding: '12px', borderRadius: '8px', textAlign: 'center'}}>{errorMsg}</p>}
+
+          <button type="submit" className="submit-btn" disabled={isSubmitting || !!successMsg} style={{gridColumn: '1 / -1', marginTop: '10px'}}>
+            {isSubmitting ? 'Creating Account...' : 'Register Patient Account'}
           </button>
 
           <p style={{gridColumn: '1 / -1', textAlign: 'center', marginTop: '10px'}}>

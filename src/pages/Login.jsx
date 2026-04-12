@@ -4,31 +4,44 @@ import { useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import './SharedPages.css';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, user, loading } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect if already logged in
   React.useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setIsSubmitting(true);
+
     const res = await login(email, password);
+
     if (!res.success) {
-      setError(res.message);
-      setLoading(false);
+      setError(res.message || 'Login failed. Please check your credentials.');
+      setIsSubmitting(false);
     }
-    // No navigate here - the useEffect will handle it once the user state is updated in context
+    // On success, the user state change in context triggers the useEffect above
   };
+
+  // Show nothing while checking initial session
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0d1117', color: '#fff' }}>
+        <p>Loading CareSphere...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-wrapper dark-nav">
@@ -48,6 +61,7 @@ const Login = () => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
+              disabled={isSubmitting}
             />
           </div>
           
@@ -59,13 +73,14 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              disabled={isSubmitting}
             />
           </div>
 
-          {error && <p style={{color: 'red', marginBottom: '15px'}}>{error}</p>}
+          {error && <p style={{color: '#ff4d4d', marginBottom: '15px', textAlign: 'center', padding: '10px', background: 'rgba(255,77,77,0.1)', borderRadius: '8px', border: '1px solid rgba(255,77,77,0.3)'}}>{error}</p>}
 
-          <button type="submit" className="submit-btn" disabled={loading} style={{marginBottom: '15px'}}>
-            {loading ? 'Authenticating...' : 'Login'}
+          <button type="submit" className="submit-btn" disabled={isSubmitting} style={{marginBottom: '15px'}}>
+            {isSubmitting ? 'Authenticating...' : 'Login'}
           </button>
 
           <p style={{textAlign: 'center'}}>
