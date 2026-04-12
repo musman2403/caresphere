@@ -263,6 +263,11 @@ export const AuthProvider = ({ children }) => {
       email: formData.email,
       role: formData.role,
       department: formData.department,
+      coverletter: formData.coverLetter,
+      licensenumber: formData.licenseNumber || null,
+      yearsexperience: formData.yearsExperience ? parseInt(formData.yearsExperience) : null,
+      shiftpreference: formData.shiftPreference || null,
+      languages: formData.languages || null,
       status: 'Pending'
     };
     const { error } = await supabase.from('applications').insert([payload]);
