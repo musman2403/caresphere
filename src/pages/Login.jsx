@@ -83,6 +83,9 @@ const Login = () => {
             {isSubmitting ? 'Authenticating...' : 'Login'}
           </button>
 
+          <p style={{textAlign: 'center', marginBottom: '8px'}}>
+            <Link to="/forgot-password" style={{color: '#aaa', fontSize: '0.9rem'}}>Forgot your password?</Link>
+          </p>
           <p style={{textAlign: 'center'}}>
             Don't have an account? <Link to="/signup" style={{color: '#00b4db', fontWeight: 'bold'}}>Sign Up</Link>
           </p>
