@@ -88,12 +88,23 @@ const AdminView = () => {
                     <td style={{fontWeight: '500'}}>{app.name}</td>
                     <td style={{textTransform:'capitalize'}}>{app.role}</td>
                     <td>{app.department || 'N/A'}</td>
-                    <td><span className="status-badge" style={{backgroundColor: '#fef3c7', color: '#d97706'}}>{app.status}</span></td>
                     <td>
-                      <div style={{display: 'flex', gap: '8px'}}>
-                        <button className="action-btn primary" onClick={() => approveApplication(app.id)}>Approve</button>
-                        <button className="action-btn danger" onClick={() => rejectApplication(app.id)}>Reject</button>
-                      </div>
+                      <span className="status-badge" style={{
+                        backgroundColor: app.status === 'Approved' ? '#dcfce7' : app.status === 'Rejected' ? '#fee2e2' : '#fef3c7', 
+                        color: app.status === 'Approved' ? '#16a34a' : app.status === 'Rejected' ? '#dc2626' : '#d97706'
+                      }}>
+                        {app.status}
+                      </span>
+                    </td>
+                    <td>
+                      {app.status === 'Pending' ? (
+                        <div style={{display: 'flex', gap: '8px'}}>
+                          <button className="action-btn primary" onClick={() => approveApplication(app.id)}>Approve</button>
+                          <button className="action-btn danger" onClick={() => rejectApplication(app.id)}>Reject</button>
+                        </div>
+                      ) : (
+                        <span style={{color: '#aaa'}}>-</span>
+                      )}
                     </td>
                   </tr>
                 ))}

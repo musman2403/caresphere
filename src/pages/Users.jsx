@@ -11,9 +11,17 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [editDetails, setEditDetails] = useState({});
 
-  if (user?.role !== ROLES.ADMIN && user?.role !== ROLES.DOCTOR) {
+  // Safety: if auth user is not loaded yet, show loading
+  if (!user || !user.role) {
+    return <div className="page-wrapper"><p style={{padding: '40px', textAlign: 'center'}}>Loading user data...</p></div>;
+  }
+
+  if (user.role !== ROLES.ADMIN && user.role !== ROLES.DOCTOR) {
     return <div>Access Denied</div>;
   }
+
+  // Safe users list - filter out any null/undefined entries
+  const safeUsers = Array.isArray(users) ? users.filter(u => u != null && typeof u === 'object') : [];
 
   const availableRoles = Object.values(ROLES).filter(role => {
     if (user.role === ROLES.ADMIN) return true;
@@ -34,8 +42,8 @@ const Users = () => {
   };
 
   const openUserModal = (u) => {
+    if (!u) return;
     setSelectedUser(u);
-    // Initialize standard fields from DB if they exist on the user object
     setEditDetails({
       salary: u.salary || '',
       shift: u.shift || '',
@@ -46,7 +54,7 @@ const Users = () => {
       experience: u.experience || '',
       disease: u.disease || '',
       bloodgroup: u.bloodgroup || '',
-      role: u.role
+      role: u.role || ''
     });
   };
 
@@ -61,6 +69,8 @@ const Users = () => {
 
   const handleSaveDetails = async (e) => {
     e.preventDefault();
+    if (!selectedUser) return;
+
     // First, handle role change if changed (Admins only)
     if (editDetails.role !== selectedUser.role && user.role === ROLES.ADMIN) {
       await updateUserRole(selectedUser.id, editDetails.role);
@@ -108,7 +118,8 @@ const Users = () => {
   };
 
   const handleDeleteUser = () => {
-    if (window.confirm(`Are you sure you want to remove ${selectedUser.name}?`)) {
+    if (!selectedUser) return;
+    if (window.confirm(`Are you sure you want to remove ${selectedUser.name || 'this user'}?`)) {
       removeUser(selectedUser);
       closeUserModal();
     }
@@ -119,7 +130,7 @@ const Users = () => {
       <header className="page-header" style={{padding: '40px 20px', flexDirection: 'row', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left'}}>
         <div>
           <h2 style={{color: 'white', margin: 0, fontSize: '2rem'}}>User Management</h2>
-          <p style={{margin: 0, opacity: 0.9}}>Authenticated as: {user?.name} (<span style={{textTransform: 'capitalize'}}>{user?.role}</span>)</p>
+          <p style={{margin: 0, opacity: 0.9}}>Authenticated as: {user?.name || 'Admin'} (<span style={{textTransform: 'capitalize'}}>{user?.role || ''}</span>)</p>
         </div>
         <Link to="/dashboard">
           <button className="nav-btn" style={{color: 'white'}}>Back to Dashboard</button>
@@ -158,24 +169,28 @@ const Users = () => {
           {/* Users Grid */}
           <div style={{ flex: '2', minWidth: '400px' }}>
             <h4 style={{color: '#112A46', fontSize: '1.4rem', marginBottom: '10px'}}>Current Directory</h4>
-            <div className="users-grid">
-              {users.map(u => (
-                <div key={u.id} className="user-card" onClick={() => openUserModal(u)}>
-                  <div className="user-card-header">
-                    <h4>{u.name}</h4>
-                    <span className="role-badge">{u.role}</span>
+            {safeUsers.length === 0 ? (
+              <p style={{color: '#888'}}>No users found in the directory.</p>
+            ) : (
+              <div className="users-grid">
+                {safeUsers.map((u, index) => (
+                  <div key={u.id || `user-${index}`} className="user-card" onClick={() => openUserModal(u)}>
+                    <div className="user-card-header">
+                      <h4>{u.name || 'Unknown'}</h4>
+                      <span className="role-badge">{u.role || 'User'}</span>
+                    </div>
+                    <div style={{fontSize: '0.9rem', color: '#666'}}>
+                      <p style={{margin: '2px 0'}}><strong>Email:</strong> {u.email || u.username || 'N/A'}</p>
+                      {u.department && <p style={{margin: '2px 0'}}><strong>Dept:</strong> {u.department}</p>}
+                      {u.role === ROLES.PATIENT && u.disease && <p style={{margin: '2px 0'}}><strong>Condition:</strong> {u.disease}</p>}
+                    </div>
+                    <div style={{marginTop: 'auto', paddingTop: '10px', textAlign: 'right'}}>
+                      <span style={{fontSize: '0.8rem', color: '#0083B0', fontWeight: '600'}}>Edit Details &rarr;</span>
+                    </div>
                   </div>
-                  <div style={{fontSize: '0.9rem', color: '#666'}}>
-                    <p style={{margin: '2px 0'}}><strong>Email:</strong> {u.email || u.username}</p>
-                    {u.department && <p style={{margin: '2px 0'}}><strong>Dept:</strong> {u.department}</p>}
-                    {u.role === ROLES.PATIENT && u.disease && <p style={{margin: '2px 0'}}><strong>Condition:</strong> {u.disease}</p>}
-                  </div>
-                  <div style={{marginTop: 'auto', paddingTop: '10px', textAlign: 'right'}}>
-                    <span style={{fontSize: '0.8rem', color: '#0083B0', fontWeight: '600'}}>Edit Details &rarr;</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -185,7 +200,7 @@ const Users = () => {
         <div className="modal-overlay" onClick={closeUserModal}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={closeUserModal}>&times;</button>
-            <h3 style={{color: '#112A46', marginBottom: '5px'}}>Edit {selectedUser.name}</h3>
+            <h3 style={{color: '#112A46', marginBottom: '5px'}}>Edit {selectedUser.name || 'User'}</h3>
             <p style={{color: '#888', fontSize: '0.9rem', marginBottom: '20px'}}>Update details or permissions for this user.</p>
             
             <form onSubmit={handleSaveDetails} style={{boxShadow: 'none', padding: 0, maxWidth: '100%'}}>
@@ -252,7 +267,7 @@ const Users = () => {
               )}
 
               {/* Role Switcher (Admins Only) */}
-              {user.role === ROLES.ADMIN && selectedUser.id !== user.id && (
+              {user.role === ROLES.ADMIN && selectedUser.id && user.id && selectedUser.id !== user.id && (
                 <div className="form-group">
                   <label>System Role</label>
                   <select value={editDetails.role} onChange={e => handleDetailChange('role', e.target.value)}>
@@ -266,7 +281,7 @@ const Users = () => {
               <hr style={{border: 'none', borderTop: '1px solid #eee', margin: '20px 0'}} />
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {user.role === ROLES.ADMIN && selectedUser.id !== user.id ? (
+                {user.role === ROLES.ADMIN && selectedUser.id && user.id && selectedUser.id !== user.id ? (
                    <button type="button" onClick={handleDeleteUser} className="action-btn danger">Remove User</button>
                 ) : <div></div>}
                 <div style={{display: 'flex', gap: '10px'}}>
