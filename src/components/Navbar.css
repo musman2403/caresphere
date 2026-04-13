@@ -27,8 +27,10 @@
 
 .navbar-links {
   display: flex;
-  gap: 30px;
+  gap: 20px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .nav-link {
@@ -76,8 +78,11 @@
 
 @media (max-width: 768px) {
   .navbar {
-    padding: 20px;
+    padding: 15px;
     flex-direction: column;
+    gap: 15px;
+  }
+  .navbar-links {
     gap: 15px;
   }
 }

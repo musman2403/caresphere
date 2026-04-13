@@ -27,7 +27,7 @@ const Dashboard = () => {
 
   return (
     <div className="page-wrapper">
-      <header className="page-header" style={{padding: '40px 20px', flexDirection: 'row', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left'}}>
+      <header className="page-header dashboard-header">
         <div>
           <h2 style={{color: 'white', margin: 0, fontSize: '2rem'}}>CareSphere Dashboard</h2>
           <p style={{margin: 0, opacity: 0.9}}>Authenticated as: {user?.name} (<span style={{textTransform: 'capitalize'}}>{user?.role}</span>)</p>
