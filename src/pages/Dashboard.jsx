@@ -38,10 +38,35 @@ const Dashboard = () => {
       </header>
       
       <main className="dashboard-container">
+        <ProfileDetails />
         {renderRoleDashboard()}
       </main>
     </div>
   );
+};
+
+const ProfileDetails = () => {
+    const { user } = useAuth();
+    if (!user || !user.profile) return null;
+
+    const omitKeys = ['adminid', 'docid', 'nurseid', 'repid', 'pid', 'wardbid', 'depid', 'status', 'registrationdate'];
+    const entries = Object.entries(user.profile).filter(([k]) => !omitKeys.includes(k));
+
+    return (
+        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '30px' }}>
+            <h4 style={{ margin: '0 0 15px', color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>My Profile & Credentials</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                {entries.map(([key, val]) => (
+                    <div key={key}>
+                        <strong style={{ display: 'block', color: '#64748b', textTransform: 'capitalize', fontSize: '0.85rem', marginBottom: '4px' }}>
+                            {key === 'passwordhash' ? 'Password' : key}
+                        </strong>
+                        <span style={{ color: '#0f172a', wordBreak: 'break-all' }}>{val || 'N/A'}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 };
 
 /* Role Specific Views */
@@ -176,7 +201,7 @@ const DoctorView = () => {
 
       <div style={{ marginTop: '30px' }}>
         <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>Appointments Queue</h4>
-        <AppointmentsTable appointments={myAppointments} updateAppointmentStatus={updateAppointmentStatus} />
+        <AppointmentsTable appointments={myAppointments} updateAppointmentStatus={updateAppointmentStatus} canEdit={true} isDoctor={true} />
       </div>
     </div>
   );
@@ -416,7 +441,7 @@ const WardDataDisplay = ({ canEdit = false }) => {
     )
 }
 
-const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = false }) => {
+const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = false, isDoctor = false }) => {
     return (
         appointments.length === 0 ? (
           <p style={{color: '#888', marginTop: '20px'}}>No appointments scheduled.</p>
@@ -434,13 +459,13 @@ const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = fa
               </thead>
               <tbody>
                 {appointments.map(app => {
-                    const isCompleted = new Date(app.date) < new Date() && app.status !== 'Canceled';
+                    const isCompleted = new Date(app.date) < new Date() && app.status !== 'Canceled' && app.status !== 'Rejected';
                     const displayStatus = isCompleted ? 'Completed' : app.status;
 
                     let bg = '#f1f5f9';
                     let fg = '#475569';
-                    if (displayStatus === 'Confirmed') { bg = '#dcfce7'; fg = '#16a34a'; }
-                    else if (displayStatus === 'Canceled') { bg = '#fee2e2'; fg = '#dc2626'; }
+                    if (displayStatus === 'Confirmed' || displayStatus === 'Approved') { bg = '#dcfce7'; fg = '#16a34a'; }
+                    else if (displayStatus === 'Canceled' || displayStatus === 'Rejected') { bg = '#fee2e2'; fg = '#dc2626'; }
                     else if (displayStatus === 'Completed') { bg = '#e0f2fe'; fg = '#0284c7'; }
                     else if (displayStatus === 'Pending') { bg = '#fef3c7'; fg = '#d97706'; }
 
@@ -460,10 +485,10 @@ const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = fa
                       ) : (
                           <div style={{display: 'flex', gap: '8px'}}>
                                {(app.status === 'Pending' && !isCompleted && canEdit) && (
-                                <button className="action-btn primary" onClick={() => updateAppointmentStatus(app.id, 'Confirmed')}>Confirm</button>
+                                <button className="action-btn primary" onClick={() => updateAppointmentStatus(app.id, isDoctor ? 'Approved' : 'Confirmed')}>{isDoctor ? 'Approve' : 'Confirm'}</button>
                               )}
-                              {(app.status !== 'Canceled' && !isCompleted && canEdit) && (
-                                  <button className="action-btn danger" onClick={() => updateAppointmentStatus(app.id, 'Canceled')}>Cancel</button>
+                              {(app.status !== 'Canceled' && app.status !== 'Rejected' && !isCompleted && canEdit) && (
+                                  <button className="action-btn danger" onClick={() => updateAppointmentStatus(app.id, isDoctor ? 'Rejected' : 'Canceled')}>{isDoctor ? 'Reject' : 'Cancel'}</button>
                               )}
                           </div>
                       )}
@@ -554,7 +579,7 @@ const PatientView = () => {
                     <td>{app.doctorName || 'N/A'}</td>
                     <td>{new Date(app.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
                     <td>
-                      <span className="status-badge" style={{ backgroundColor: app.status === 'Confirmed' ? '#dcfce7' : app.status === 'Canceled' ? '#fee2e2' : '#fef3c7', color: app.status === 'Confirmed' ? '#16a34a' : app.status === 'Canceled' ? '#dc2626' : '#d97706' }}>
+                      <span className="status-badge" style={{ backgroundColor: (app.status === 'Confirmed' || app.status === 'Approved') ? '#dcfce7' : (app.status === 'Canceled' || app.status === 'Rejected') ? '#fee2e2' : '#fef3c7', color: (app.status === 'Confirmed' || app.status === 'Approved') ? '#16a34a' : (app.status === 'Canceled' || app.status === 'Rejected') ? '#dc2626' : '#d97706' }}>
                         {app.status}
                       </span>
                     </td>
