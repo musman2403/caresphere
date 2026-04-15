@@ -13,6 +13,8 @@ import Apply from './pages/Apply';
 import Doctors from './pages/Doctors';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import NotFound from './pages/NotFound';
+
 function App() {
   return (
     <AuthProvider>
@@ -43,7 +45,7 @@ function App() {
           <Route path="/apply" element={<Apply />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </AuthProvider>
