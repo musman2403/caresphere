@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../dummyData';
 import { Link } from 'react-router-dom';
+import Loader from '../components/Loader';
 import './SharedPages.css';
 
 const Users = () => {
@@ -15,7 +16,7 @@ const Users = () => {
 
   // Safety: if auth user is not loaded yet, show loading
   if (!user || !user.role) {
-    return <div className="page-wrapper"><p style={{padding: '40px', textAlign: 'center'}}>Loading user data...</p></div>;
+    return <Loader fullScreen={false} text="Loading user data..." />;
   }
 
   if (user.role !== ROLES.ADMIN && user.role !== ROLES.DOCTOR) {

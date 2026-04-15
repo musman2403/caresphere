@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import Loader from '../components/Loader';
 import './SharedPages.css';
 
 const Login = () => {
@@ -36,11 +37,7 @@ const Login = () => {
 
   // Show nothing while checking initial session
   if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0d1117', color: '#fff' }}>
-        <p>Loading CareSphere...</p>
-      </div>
-    );
+    return <Loader />;
   }
 
   return (
