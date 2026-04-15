@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [applications, setApplications] = useState([]); 
+  const [tasks, setTasks] = useState([]);
   const [wards, setWards] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,7 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await supabase
         .from(table)
         .select('*')
-        .eq(emailFields[table], email)
+        .ilike(emailFields[table], email.trim())
         .maybeSingle(); // maybeSingle() returns null data (not an error) when no rows found
       
       if (error) {
@@ -103,6 +104,7 @@ export const AuthProvider = ({ children }) => {
         id: a.apid,
         patientName: a.patient?.pname,
         doctorName: a.doctor?.name,
+        doctorId: a.docid,
         department: a.departments?.departmentname,
         date: a.appointmentdate,
         status: a.status,
@@ -130,6 +132,24 @@ export const AuthProvider = ({ children }) => {
       const { data: appsData, error: appsError } = await supabase.from('applications').select('*');
       if (!appsError && appsData) {
         setApplications(appsData);
+      }
+
+      // 6. Fetch WardBoy Tasks
+      const { data: tasksData, error: tasksError } = await supabase.from('wardboytasks').select(`
+        *,
+        wardboy(wardbname)
+      `);
+      if (!tasksError && tasksData) {
+        setTasks(tasksData.map(t => ({
+          id: t.taskid,
+          wardboyId: t.wardbid,
+          wardboyName: t.wardboy?.wardbname,
+          assignedByRole: t.assignedbyrole,
+          assignedByName: t.assignedbyname,
+          description: t.taskdescription,
+          status: t.status,
+          createdAt: t.createdat
+        })));
       }
 
     } catch (err) {
@@ -194,7 +214,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Use the email from Supabase Auth (canonical/lowercase form)
-      const authEmail = data.user.email;
+      const authEmail = data.user.email.trim().toLowerCase();
 
       // Fetch the profile from DB tables using the Supabase auth email
       const profile = await fetchProfileByEmail(authEmail);
@@ -222,8 +242,9 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (userData) => {
     // 1. Supabase Auth Signup
+    const safeEmail = userData.email.trim().toLowerCase();
     const { data: authData, error: authError } = await supabase.auth.signUp({ 
-      email: userData.email, 
+      email: safeEmail, 
       password: userData.password 
     });
 
@@ -232,7 +253,7 @@ export const AuthProvider = ({ children }) => {
     // 2. Create Patient Profile
     const { error: profileError } = await supabase.from('patient').insert([{
       pname: userData.name,
-      email: userData.email,
+      email: safeEmail,
       gender: userData.gender,
       dob: userData.dob,
       phoneno: userData.phone,
@@ -295,6 +316,39 @@ export const AuthProvider = ({ children }) => {
     await fetchAllData();
   };
 
+  const assignTask = async (wardboyId, description, assignedByRole, assignedByName) => {
+    const payload = {
+        wardbid: wardboyId,
+        taskdescription: description,
+        assignedbyrole: assignedByRole,
+        assignedbyname: assignedByName
+    };
+    const { error } = await supabase.from('wardboytasks').insert([payload]);
+    if (error) {
+      console.error('assignTask error:', error.message);
+      setTasks(prev => [...prev, {
+        id: Date.now(),
+        wardboyId,
+        assignedByRole,
+        assignedByName,
+        description,
+        status: 'Pending',
+        createdAt: new Date().toISOString()
+      }]);
+    } else {
+      await fetchAllData();
+    }
+  };
+
+  const updateTaskStatus = async (taskId, newStatus) => {
+    const { error } = await supabase.from('wardboytasks').update({ status: newStatus }).eq('taskid', taskId);
+    if (!error) {
+      await fetchAllData();
+    } else {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    }
+  };
+
   const addUser = async (userData) => {
     // 1. Create user in Supabase Auth using a temporary client
     // so it doesn't log the active admin out.
@@ -309,8 +363,10 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
+    const safeEmail = userData.username.trim().toLowerCase();
+
     const { error: authError } = await adminAuthClient.auth.signUp({
-      email: userData.username, // In Users.jsx, the 'username' field represents the element's email 
+      email: safeEmail, // In Users.jsx, the 'username' field represents the element's email 
       password: userData.password
     });
 
@@ -323,12 +379,12 @@ export const AuthProvider = ({ children }) => {
     let table = '';
     let payload = { status: 'Active' };
     switch (userData.role) {
-      case ROLES.DOCTOR: table = 'doctor'; payload = { ...payload, name: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
-      case ROLES.NURSE: table = 'nurse'; payload = { ...payload, nursename: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
-      case ROLES.RECEPTIONIST: table = 'receptionist'; payload = { ...payload, name: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
-      case ROLES.WARDBOY: table = 'wardboy'; payload = { ...payload, wardbname: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
-      case ROLES.PATIENT: table = 'patient'; payload = { ...payload, pname: userData.name, email: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
-      case ROLES.ADMIN: table = 'admins'; payload = { username: userData.username, passwordhash: 'MANAGED_BY_SUPABASE_AUTH', role: ROLES.ADMIN }; break;
+      case ROLES.DOCTOR: table = 'doctor'; payload = { ...payload, name: userData.name, email: safeEmail, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.NURSE: table = 'nurse'; payload = { ...payload, nursename: userData.name, email: safeEmail, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.RECEPTIONIST: table = 'receptionist'; payload = { ...payload, name: userData.name, email: safeEmail, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.WARDBOY: table = 'wardboy'; payload = { ...payload, wardbname: userData.name, email: safeEmail, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.PATIENT: table = 'patient'; payload = { ...payload, pname: userData.name, email: safeEmail, passwordhash: 'MANAGED_BY_SUPABASE_AUTH' }; break;
+      case ROLES.ADMIN: table = 'admins'; payload = { username: safeEmail, passwordhash: 'MANAGED_BY_SUPABASE_AUTH', role: ROLES.ADMIN }; break;
       default: return { success: false, message: 'Invalid role' };
     }
     
@@ -458,10 +514,10 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, users, appointments, applications, wards, departments,
+      user, users, appointments, applications, wards, departments, tasks,
       login, signup, logout, bookAppointment, updateAppointmentStatus, 
       addUser, removeUser, updateUserRole, updateUserDetails, addDepartment, addWard, updateWard, updateWardBeds, deleteWard, loading,
-      submitApplication, approveApplication, rejectApplication, deleteApplication
+      submitApplication, approveApplication, rejectApplication, deleteApplication, assignTask, updateTaskStatus
     }}>
       {children}
     </AuthContext.Provider>

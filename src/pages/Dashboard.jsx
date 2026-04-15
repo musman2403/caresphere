@@ -184,13 +184,15 @@ const AdminView = () => {
       <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>All Hospital Appointments</h4>
       <AppointmentsTable appointments={appointments} updateAppointmentStatus={updateAppointmentStatus} canEdit={true} />
     </div>
+    
+    <TaskManagement canAssign={true} />
   </div>
   );
 };
 
 const DoctorView = () => {
   const { appointments, updateAppointmentStatus, user } = useAuth();
-  const myAppointments = appointments.filter(a => a.department === user.department || !user.department);
+  const myAppointments = appointments.filter(a => a.doctorId === user.id);
 
   return (
     <div>
@@ -203,6 +205,8 @@ const DoctorView = () => {
         <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>Appointments Queue</h4>
         <AppointmentsTable appointments={myAppointments} updateAppointmentStatus={updateAppointmentStatus} canEdit={true} isDoctor={true} />
       </div>
+      
+      <TaskManagement canAssign={true} />
     </div>
   );
 };
@@ -233,6 +237,8 @@ const ReceptionistView = () => {
       <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>All Appointments</h4>
       <AppointmentsTable appointments={appointments} updateAppointmentStatus={updateAppointmentStatus} canEdit={true} />
     </div>
+
+    <TaskManagement canAssign={true} />
   </div>
   );
 };
@@ -451,6 +457,7 @@ const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = fa
               <thead>
                 <tr>
                   <th>Patient</th>
+                  <th>Doctor</th>
                   <th>Department</th>
                   <th>Date & Time</th>
                   <th>Status</th>
@@ -472,6 +479,7 @@ const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = fa
                     return (
                   <tr key={app.id}>
                     <td style={{fontWeight: '500', color: '#112A46'}}>{app.patientName}</td>
+                    <td>{app.doctorName || 'Unassigned'}</td>
                     <td>{app.department}</td>
                     <td>{new Date(app.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
                     <td>
@@ -599,15 +607,21 @@ const PatientView = () => {
   );
 };
 
-const WardBoyView = () => (
-  <div>
-    <h3 style={{color: '#112A46', fontSize: '1.6rem', marginBottom: '20px'}}>Ward Staff View</h3>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-      <StatCard title="Pending Tasks" value="7" />
-      <StatCard title="Shift Status" value="On Duty" color="#16a34a" />
+const WardBoyView = () => {
+  const { tasks, user } = useAuth();
+  const pendingTasks = tasks.filter(t => t.wardboyId === user.id && t.status === 'Pending');
+
+  return (
+    <div>
+      <h3 style={{color: '#112A46', fontSize: '1.6rem', marginBottom: '20px'}}>Ward Staff View</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+        <StatCard title="Pending Tasks" value={pendingTasks.length.toString()} />
+        <StatCard title="Shift Status" value="On Duty" color="#16a34a" />
+      </div>
+      <TaskManagement canAssign={false} />
     </div>
-  </div>
-);
+  );
+};
 
 const StatCard = ({ title, value, color = '#112A46' }) => (
   <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #f0f0f0', padding: '25px', boxShadow: '0 5px 20px rgba(0,0,0,0.03)', borderLeft: `5px solid ${color}` }}>
@@ -615,5 +629,79 @@ const StatCard = ({ title, value, color = '#112A46' }) => (
     <p style={{ margin: '0', fontSize: '2.5rem', fontWeight: '700', color: color, lineHeight: '1' }}>{value}</p>
   </div>
 );
+
+const TaskManagement = ({ canAssign = false }) => {
+  const { tasks, users, user, assignTask, updateTaskStatus } = useAuth();
+  const [description, setDescription] = useState('');
+  const [wardboyId, setWardboyId] = useState('');
+
+  const wardboys = users.filter(u => u.role === ROLES.WARDBOY);
+  
+  // If user is wardboy, show only their tasks, else show all
+  const filteredTasks = user.role === ROLES.WARDBOY ? tasks.filter(t => t.wardboyId === user.id) : tasks;
+
+  const handleAssign = (e) => {
+    e.preventDefault();
+    if (!description || !wardboyId) return;
+    assignTask(wardboyId, description, user.role, user.name);
+    setDescription('');
+    setWardboyId('');
+    alert('Task assigned successfully!');
+  };
+
+  return (
+    <div style={{ marginTop: '40px' }}>
+      <h4 style={{color: '#112A46', fontSize: '1.4rem', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px'}}>Wardboy Task Management</h4>
+      
+      {canAssign && (
+        <form onSubmit={handleAssign} style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px', display: 'flex', gap: '15px', flexWrap: 'wrap', boxShadow: 'none' }}>
+           <select value={wardboyId} onChange={e => setWardboyId(e.target.value)} required style={{margin: 0, flex: '1', minWidth: '150px'}}>
+             <option value="">Select Wardboy</option>
+             {wardboys.map(w => (
+               <option key={w.id} value={w.id}>{w.name}</option>
+             ))}
+           </select>
+           <input type="text" placeholder="Task Description" value={description} onChange={e => setDescription(e.target.value)} required style={{margin: 0, flex: '2', minWidth: '200px'}} />
+           <button type="submit" className="action-btn primary" style={{padding: '10px 20px'}}>Assign Task</button>
+        </form>
+      )}
+
+      <div className="sleek-table-container">
+        <table className="sleek-table">
+          <thead>
+            <tr>
+              <th>Task Description</th>
+              <th>Assigned To</th>
+              <th>Assigned By</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTasks.length === 0 ? (
+              <tr><td colSpan="5" style={{textAlign:'center', color:'#888'}}>No tasks available.</td></tr>
+            ) : filteredTasks.map(t => (
+              <tr key={t.id}>
+                <td>{t.description}</td>
+                <td style={{textTransform:'capitalize'}}>{t.wardboyName || 'Unknown Wardboy'}</td>
+                <td style={{textTransform:'capitalize'}}>{t.assignedByName} ({t.assignedByRole})</td>
+                <td>
+                  <span className="status-badge" style={{ backgroundColor: t.status === 'Completed' ? '#dcfce7' : '#fef3c7', color: t.status === 'Completed' ? '#16a34a' : '#d97706' }}>
+                    {t.status}
+                  </span>
+                </td>
+                <td>
+                  {user.role === ROLES.WARDBOY && t.status === 'Pending' ? (
+                    <button className="action-btn primary" onClick={() => updateTaskStatus(t.id, 'Completed')}>Mark Completed</button>
+                  ) : <span style={{color: '#aaa'}}>-</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 export default Dashboard;

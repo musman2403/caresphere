@@ -10,6 +10,8 @@ const Users = () => {
   const [formData, setFormData] = useState({ name: '', username: '', password: '', role: ROLES.PATIENT });
   const [selectedUser, setSelectedUser] = useState(null);
   const [editDetails, setEditDetails] = useState({});
+  const [filterRole, setFilterRole] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Safety: if auth user is not loaded yet, show loading
   if (!user || !user.role) {
@@ -22,6 +24,15 @@ const Users = () => {
 
   // Safe users list - filter out any null/undefined entries
   const safeUsers = Array.isArray(users) ? users.filter(u => u != null && typeof u === 'object') : [];
+
+  const filteredUsers = safeUsers.filter(u => {
+    const matchesRole = filterRole === 'All' || u.role === filterRole;
+    const matchesSearch = 
+      (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (u.username && u.username.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesRole && matchesSearch;
+  });
 
   const availableRoles = Object.values(ROLES).filter(role => {
     if (user.role === ROLES.ADMIN) return true;
@@ -168,12 +179,33 @@ const Users = () => {
 
           {/* Users Grid */}
           <div style={{ flex: '2', minWidth: '400px' }}>
-            <h4 style={{color: '#112A46', fontSize: '1.4rem', marginBottom: '10px'}}>Current Directory</h4>
-            {safeUsers.length === 0 ? (
-              <p style={{color: '#888'}}>No users found in the directory.</p>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px'}}>
+              <h4 style={{color: '#112A46', fontSize: '1.4rem', margin: 0}}>Current Directory</h4>
+              <div style={{display: 'flex', gap: '10px'}}>
+                <input 
+                  type="text" 
+                  placeholder="Search user..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{padding: '8px 12px', border: '1px solid #ccc', borderRadius: '6px', outline: 'none', maxWidth: '200px'}}
+                />
+                <select 
+                  value={filterRole} 
+                  onChange={(e) => setFilterRole(e.target.value)}
+                  style={{padding: '8px 12px', border: '1px solid #ccc', borderRadius: '6px', outline: 'none'}}
+                >
+                  <option value="All">All Roles</option>
+                  {Object.values(ROLES).map(role => (
+                    <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {filteredUsers.length === 0 ? (
+              <p style={{color: '#888'}}>No users found matching your criteria.</p>
             ) : (
               <div className="users-grid">
-                {safeUsers.map((u, index) => (
+                {filteredUsers.map((u, index) => (
                   <div key={u.id || `user-${index}`} className="user-card" onClick={() => openUserModal(u)}>
                     <div className="user-card-header">
                       <h4>{u.name || 'Unknown'}</h4>
