@@ -32,15 +32,25 @@ const Appointment = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        const selectedDoctor = doctors.find(d => d.id.toString() === formData.doctorId.toString());
+        let finalDocId = formData.doctorId;
+        let finalDocName = 'Unassigned';
+        
+        if (finalDocId === 'random' && doctors.length > 0) {
+            const randomIndex = Math.floor(Math.random() * doctors.length);
+            finalDocId = doctors[randomIndex].id;
+            finalDocName = doctors[randomIndex].name;
+        } else if (finalDocId !== 'random') {
+            const selectedDoctor = doctors.find(d => d.id.toString() === finalDocId.toString());
+            if (selectedDoctor) finalDocName = selectedDoctor.name;
+        }
 
         bookAppointment({
             patientId: user.id,
             patientName: formData.patientName,
             date: formData.date,
             department: formData.department,
-            doctorId: formData.doctorId,
-            doctorName: selectedDoctor ? selectedDoctor.name : 'Unassigned',
+            doctorId: finalDocId === 'random' ? '' : finalDocId,
+            doctorName: finalDocName,
             disease: formData.disease,
             note: formData.note
         });
@@ -97,6 +107,7 @@ const Appointment = () => {
                             disabled={!formData.department}
                         >
                             <option value="">{formData.department ? 'Select a Doctor' : 'Select a Department First'}</option>
+                            <option value="random">Any Doctor (Random)</option>
                             {doctors.map(doc => (
                                 <option key={doc.id} value={doc.id}>{doc.name}</option>
                             ))}

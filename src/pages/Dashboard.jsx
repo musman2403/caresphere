@@ -520,26 +520,36 @@ const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = fa
 };
 
 const PatientView = () => {
-  const { user, appointments, departments, bookAppointment, updateAppointmentStatus } = useAuth();
+  const { user, users, appointments, departments, bookAppointment, updateAppointmentStatus } = useAuth();
   const [date, setDate] = useState('');
   const [department, setDepartment] = useState('');
+  const [doctorId, setDoctorId] = useState('');
   const [disease, setDisease] = useState('');
   const [note, setNote] = useState('');
 
   const myAppointments = appointments.filter(a => a.patientId === user.id);
+  const doctorsInDept = users.filter(u => u.role === 'doctor' && u.department === department);
 
   const handleBook = (e) => {
     e.preventDefault();
+    let selectedDocId = doctorId;
+    if (selectedDocId === 'random' && doctorsInDept.length > 0) {
+      const randomIndex = Math.floor(Math.random() * doctorsInDept.length);
+      selectedDocId = doctorsInDept[randomIndex].id;
+    }
+
     bookAppointment({
       patientId: user.id,
       patientName: user.name,
       date,
       department,
+      doctorId: selectedDocId === 'random' ? '' : selectedDocId,
       disease,
       note
     });
     setDate('');
     setDepartment('');
+    setDoctorId('');
     setDisease('');
     setNote('');
     alert('Appointment requested successfully and is pending confirmation!');
@@ -566,11 +576,21 @@ const PatientView = () => {
           </div>
           <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
             <label>Department Specialist</label>
-            <select value={department} onChange={e => setDepartment(e.target.value)} required>
+            <select value={department} onChange={e => { setDepartment(e.target.value); setDoctorId(''); }} required>
               <option value="">Select Department</option>
               {(departments || []).map(dept => (
                   <option key={dept.id} value={dept.name}>{dept.name}</option>
               ))}
+            </select>
+          </div>
+          <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
+            <label>Attending Doctor</label>
+            <select value={doctorId} onChange={e => setDoctorId(e.target.value)} required disabled={!department}>
+               <option value="">{department ? 'Select a Doctor' : 'Select Department First'}</option>
+               <option value="random">Any Doctor (Random)</option>
+               {doctorsInDept.map(doc => (
+                 <option key={doc.id} value={doc.id}>{doc.name}</option>
+               ))}
             </select>
           </div>
           <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
