@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Appointment = () => {
-    const { user, users, bookAppointment } = useAuth();
+    const { user, users, departments, bookAppointment } = useAuth();
     const navigate = useNavigate();
     
     // Redirect if not logged in
@@ -22,7 +22,9 @@ const Appointment = () => {
         patientName: user?.name || '',
         date: '',
         department: '',
-        doctorId: ''
+        doctorId: '',
+        disease: '',
+        note: ''
     });
 
     const doctors = users.filter(u => u.role === 'doctor' && u.department === formData.department);
@@ -38,7 +40,9 @@ const Appointment = () => {
             date: formData.date,
             department: formData.department,
             doctorId: formData.doctorId,
-            doctorName: selectedDoctor ? selectedDoctor.name : 'Unassigned'
+            doctorName: selectedDoctor ? selectedDoctor.name : 'Unassigned',
+            disease: formData.disease,
+            note: formData.note
         });
         
         alert('Appointment requested successfully and is pending confirmation!');
@@ -78,8 +82,8 @@ const Appointment = () => {
                             required
                         >
                             <option value="">Select Department</option>
-                            {DEPARTMENTS.map(dept => (
-                                <option key={dept} value={dept}>{dept}</option>
+                            {departments.map(dept => (
+                                <option key={dept.id} value={dept.name}>{dept.name}</option>
                             ))}
                         </select>
                     </div>
@@ -97,6 +101,27 @@ const Appointment = () => {
                                 <option key={doc.id} value={doc.id}>{doc.name}</option>
                             ))}
                         </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Primary Disease / Symptoms (Optional)</label>
+                        <input 
+                            type="text" 
+                            value={formData.disease} 
+                            onChange={e => setFormData({...formData, disease: e.target.value})} 
+                            placeholder="e.g. High fever, headache"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Additional Notes (Optional)</label>
+                        <textarea 
+                            value={formData.note} 
+                            onChange={e => setFormData({...formData, note: e.target.value})} 
+                            placeholder="Any specific requests or earlier records..."
+                            style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+                            rows="3"
+                        ></textarea>
                     </div>
 
                     <div className="form-group">

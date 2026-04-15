@@ -111,6 +111,8 @@ CREATE TABLE Appointment (
     Pid INT REFERENCES Patient(Pid),
     Docid INT REFERENCES Doctor(Docid),
     Depid INT REFERENCES Departments(Depid),
+    Disease VARCHAR(200),
+    Note TEXT,
     Status VARCHAR(50) DEFAULT 'Pending'
 );
 

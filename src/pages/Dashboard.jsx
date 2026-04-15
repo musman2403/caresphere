@@ -478,7 +478,16 @@ const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = fa
 
                     return (
                   <tr key={app.id}>
-                    <td style={{fontWeight: '500', color: '#112A46'}}>{app.patientName}</td>
+                    <td style={{fontWeight: '500', color: '#112A46'}}>
+                      {app.patientName}
+                      {(app.disease || app.note) && (
+                        <div style={{fontSize:'0.8rem', color:'#666', marginTop:'4px', fontWeight: 'normal'}}>
+                          {app.disease && <strong>{app.disease}</strong>}
+                          {app.disease && app.note && <span> - </span>}
+                          {app.note && <span style={{fontStyle:'italic'}}>{app.note}</span>}
+                        </div>
+                      )}
+                    </td>
                     <td>{app.doctorName || 'Unassigned'}</td>
                     <td>{app.department}</td>
                     <td>{new Date(app.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
@@ -511,9 +520,11 @@ const AppointmentsTable = ({ appointments, updateAppointmentStatus, canEdit = fa
 };
 
 const PatientView = () => {
-  const { user, appointments, bookAppointment, updateAppointmentStatus } = useAuth();
+  const { user, appointments, departments, bookAppointment, updateAppointmentStatus } = useAuth();
   const [date, setDate] = useState('');
   const [department, setDepartment] = useState('');
+  const [disease, setDisease] = useState('');
+  const [note, setNote] = useState('');
 
   const myAppointments = appointments.filter(a => a.patientId === user.id);
 
@@ -523,10 +534,14 @@ const PatientView = () => {
       patientId: user.id,
       patientName: user.name,
       date,
-      department
+      department,
+      disease,
+      note
     });
     setDate('');
     setDepartment('');
+    setDisease('');
+    setNote('');
     alert('Appointment requested successfully and is pending confirmation!');
   };
 
@@ -553,12 +568,18 @@ const PatientView = () => {
             <label>Department Specialist</label>
             <select value={department} onChange={e => setDepartment(e.target.value)} required>
               <option value="">Select Department</option>
-              <option value="Cardiology">Cardiology</option>
-              <option value="Neurology">Neurology</option>
-              <option value="Pediatrics">Pediatrics</option>
-              <option value="Orthopedics">Orthopedics</option>
-              <option value="General">General</option>
+              {(departments || []).map(dept => (
+                  <option key={dept.id} value={dept.name}>{dept.name}</option>
+              ))}
             </select>
+          </div>
+          <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
+            <label>Primary Disease</label>
+            <input type="text" value={disease} onChange={e => setDisease(e.target.value)} placeholder="e.g. Fever" />
+          </div>
+          <div className="form-group" style={{ flex: '2', minWidth: '250px', margin: 0 }}>
+            <label>Notes</label>
+            <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Any special requests..." />
           </div>
           <div style={{ flex: '1', minWidth: '200px', display: 'flex', alignItems: 'flex-end' }}>
             <button type="submit" className="submit-btn" style={{padding: '16px'}}>Book Appointment</button>

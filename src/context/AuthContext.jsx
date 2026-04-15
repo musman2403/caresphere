@@ -108,7 +108,9 @@ export const AuthProvider = ({ children }) => {
         department: a.departments?.departmentname,
         date: a.appointmentdate,
         status: a.status,
-        patientId: a.pid
+        patientId: a.pid,
+        disease: a.disease,
+        note: a.note
       })));
 
       // 3. Fetch Wards
@@ -274,7 +276,14 @@ export const AuthProvider = ({ children }) => {
 
   const bookAppointment = async (apptData) => {
     const { data: dept } = await supabase.from('departments').select('depid').eq('departmentname', apptData.department).single();
-    await supabase.from('appointment').insert([{ appointmentdate: apptData.date, pid: apptData.patientId, docid: apptData.doctorId || null, depid: dept?.depid }]);
+    await supabase.from('appointment').insert([{ 
+        appointmentdate: apptData.date, 
+        pid: apptData.patientId, 
+        docid: apptData.doctorId || null, 
+        depid: dept?.depid,
+        disease: apptData.disease,
+        note: apptData.note
+    }]);
     await fetchAllData();
   };
 
