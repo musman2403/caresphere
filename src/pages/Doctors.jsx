@@ -3,10 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import './SharedPages.css';
-import { DEPARTMENTS } from '../dummyData';
 
 const Doctors = () => {
-    const { users } = useAuth();
+    const { users, departments } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     
@@ -34,8 +33,8 @@ const Doctors = () => {
                         style={{padding: '15px', fontSize: '1.1rem', borderRadius: '8px', border: '1px solid #ccc', width: '300px'}}
                     >
                         <option value="">All Departments</option>
-                        {DEPARTMENTS.map(dept => (
-                            <option key={dept} value={dept}>{dept}</option>
+                        {departments.map(dept => (
+                            <option key={dept.id} value={dept.name}>{dept.name}</option>
                         ))}
                     </select>
                 </div>

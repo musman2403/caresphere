@@ -6,7 +6,7 @@ import Loader from '../components/Loader';
 import './SharedPages.css';
 
 const Users = () => {
-  const { users, user, addUser, removeUser, updateUserRole, updateUserDetails } = useAuth();
+  const { users, user, departments, addUser, removeUser, updateUserRole, updateUserDetails } = useAuth();
   
   const [formData, setFormData] = useState({ name: '', username: '', password: '', role: ROLES.PATIENT });
   const [selectedUser, setSelectedUser] = useState(null);
@@ -66,7 +66,8 @@ const Users = () => {
       experience: u.experience || '',
       disease: u.disease || '',
       bloodgroup: u.bloodgroup || '',
-      role: u.role || ''
+      role: u.role || '',
+      depid: u.depid || ''
     });
   };
 
@@ -97,15 +98,18 @@ const Users = () => {
       payload.qualification = editDetails.qualification || null;
       payload.specialization = editDetails.specialization || null;
       payload.experience = editDetails.experience ? parseInt(editDetails.experience) : null;
+      payload.depid = editDetails.depid ? parseInt(editDetails.depid) : null;
     } else if (selectedUser.role === ROLES.NURSE || selectedUser.role === ROLES.WARDBOY) {
       payload.salary = editDetails.salary || null;
       payload.phoneno = editDetails.phoneno || null;
       payload.address = editDetails.address || null;
       payload.shift = editDetails.shift || null;
+      payload.depid = editDetails.depid ? parseInt(editDetails.depid) : null;
     } else if (selectedUser.role === ROLES.RECEPTIONIST) {
       payload.phoneno = editDetails.phoneno || null;
       payload.address = editDetails.address || null;
       payload.shift = editDetails.shift || null;
+      payload.depid = editDetails.depid ? parseInt(editDetails.depid) : null;
     } else if (selectedUser.role === ROLES.PATIENT) {
       payload.phoneno = editDetails.phoneno || null;
       payload.address = editDetails.address || null;
@@ -255,6 +259,17 @@ const Users = () => {
                     <div>
                       <label>Shift (e.g., Morning)</label>
                       <input type="text" value={editDetails.shift} onChange={e => handleDetailChange('shift', e.target.value)} />
+                    </div>
+                  )}
+                  {(selectedUser.role === ROLES.DOCTOR || selectedUser.role === ROLES.NURSE || selectedUser.role === ROLES.WARDBOY || selectedUser.role === ROLES.RECEPTIONIST) && (
+                    <div>
+                      <label>Department</label>
+                      <select value={editDetails.depid} onChange={e => handleDetailChange('depid', e.target.value)}>
+                        <option value="">Unassigned</option>
+                        {departments.map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
                 </div>
