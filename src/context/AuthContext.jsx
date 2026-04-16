@@ -355,11 +355,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateTaskStatus = async (taskId, newStatus) => {
+    // Optimistic UI update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    
     const { error } = await supabase.from('wardboytasks').update({ status: newStatus }).eq('taskid', taskId);
-    if (!error) {
-      await fetchAllData();
-    } else {
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    if (error) {
+      console.error('Failed to update task status:', error.message);
+      // We could revert the optimistic update here if needed, but logging is fine for now
     }
   };
 
