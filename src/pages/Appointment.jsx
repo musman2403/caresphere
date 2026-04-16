@@ -32,16 +32,30 @@ const Appointment = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         
+        const appointmentTime = new Date(formData.date);
+        const timeString = appointmentTime.toTimeString().substring(0, 5); // HH:mm
+        
         let finalDocId = formData.doctorId;
         let finalDocName = 'Unassigned';
         
         if (finalDocId === 'random' && doctors.length > 0) {
-            const randomIndex = Math.floor(Math.random() * doctors.length);
-            finalDocId = doctors[randomIndex].id;
-            finalDocName = doctors[randomIndex].name;
+            const availableDocs = doctors.filter(d => timeString >= d.shift_start && timeString <= d.shift_end);
+            if (availableDocs.length === 0) {
+                alert(`No doctors in ${formData.department} are currently available at ${timeString}. Please choose a different time.`);
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * availableDocs.length);
+            finalDocId = availableDocs[randomIndex].id;
+            finalDocName = availableDocs[randomIndex].name;
         } else if (finalDocId !== 'random') {
             const selectedDoctor = doctors.find(d => d.id.toString() === finalDocId.toString());
-            if (selectedDoctor) finalDocName = selectedDoctor.name;
+            if (selectedDoctor) {
+                if (timeString < selectedDoctor.shift_start || timeString > selectedDoctor.shift_end) {
+                    alert(`Dr. ${selectedDoctor.name} is only available between ${selectedDoctor.shift_start} and ${selectedDoctor.shift_end}.`);
+                    return;
+                }
+                finalDocName = selectedDoctor.name;
+            }
         }
 
         bookAppointment({

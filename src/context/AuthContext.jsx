@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
 
       const consolidatedUsers = [
         ...(admins || []).map(u => ({ ...u, id: u.adminid, name: u.username ? u.username.split('@')[0] : 'Admin', email: u.username || 'unknown', role: ROLES.ADMIN })),
-        ...(doctors || []).map(u => ({ ...u, id: u.docid, name: u.name || 'Unknown', email: u.email || 'unknown', role: ROLES.DOCTOR, department: deptMap[u.depid], depid: u.depid })),
+        ...(doctors || []).map(u => ({ ...u, id: u.docid, name: u.name || 'Unknown', email: u.email || 'unknown', role: ROLES.DOCTOR, department: deptMap[u.depid], depid: u.depid, shift_start: u.shift_start || '09:00', shift_end: u.shift_end || '17:00' })),
         ...(nurses || []).map(u => ({ ...u, id: u.nurseid, name: u.nursename || 'Unknown', email: u.email || 'unknown', role: ROLES.NURSE, department: deptMap[u.depid], depid: u.depid })),
         ...(receptionists || []).map(u => ({ ...u, id: u.repid, name: u.name || 'Unknown', email: u.email || 'unknown', role: ROLES.RECEPTIONIST, department: deptMap[u.depid], depid: u.depid })),
         ...(wardboys || []).map(u => ({ ...u, id: u.wardbid, name: u.wardbname || 'Unknown', email: u.email || 'unknown', role: ROLES.WARDBOY, department: deptMap[u.depid], depid: u.depid })),

@@ -59,6 +59,8 @@ const Users = () => {
     setEditDetails({
       salary: u.salary || '',
       shift: u.shift || '',
+      shift_start: u.shift_start || '09:00',
+      shift_end: u.shift_end || '17:00',
       phoneno: u.phoneno || '',
       address: u.address || '',
       qualification: u.qualification || '',
@@ -99,6 +101,8 @@ const Users = () => {
       payload.specialization = editDetails.specialization || null;
       payload.experience = editDetails.experience ? parseInt(editDetails.experience) : null;
       payload.depid = editDetails.depid ? parseInt(editDetails.depid) : null;
+      payload.shift_start = editDetails.shift_start || null;
+      payload.shift_end = editDetails.shift_end || null;
     } else if (selectedUser.role === ROLES.NURSE || selectedUser.role === ROLES.WARDBOY) {
       payload.salary = editDetails.salary || null;
       payload.phoneno = editDetails.phoneno || null;
@@ -296,6 +300,14 @@ const Users = () => {
                   <div>
                     <label>Experience (Years)</label>
                     <input type="number" value={editDetails.experience} onChange={e => handleDetailChange('experience', e.target.value)} />
+                  </div>
+                  <div>
+                    <label>Shift Start (HH:mm)</label>
+                    <input type="time" value={editDetails.shift_start} onChange={e => handleDetailChange('shift_start', e.target.value)} />
+                  </div>
+                  <div>
+                    <label>Shift End (HH:mm)</label>
+                    <input type="time" value={editDetails.shift_end} onChange={e => handleDetailChange('shift_end', e.target.value)} />
                   </div>
                 </div>
               )}

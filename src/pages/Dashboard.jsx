@@ -532,10 +532,26 @@ const PatientView = () => {
 
   const handleBook = (e) => {
     e.preventDefault();
+    const appointmentTime = new Date(date);
+    const timeString = appointmentTime.toTimeString().substring(0, 5); // HH:mm
+
     let selectedDocId = doctorId;
     if (selectedDocId === 'random' && doctorsInDept.length > 0) {
-      const randomIndex = Math.floor(Math.random() * doctorsInDept.length);
-      selectedDocId = doctorsInDept[randomIndex].id;
+      const availableDocs = doctorsInDept.filter(d => timeString >= d.shift_start && timeString <= d.shift_end);
+      if (availableDocs.length === 0) {
+        alert(`No doctors in ${department} are currently available at ${timeString}. Please choose a different time.`);
+        return;
+      }
+      const randomIndex = Math.floor(Math.random() * availableDocs.length);
+      selectedDocId = availableDocs[randomIndex].id;
+    } else if (selectedDocId !== 'random') {
+      const selectedDoctor = doctorsInDept.find(d => d.id.toString() === selectedDocId.toString());
+      if (selectedDoctor) {
+        if (timeString < selectedDoctor.shift_start || timeString > selectedDoctor.shift_end) {
+          alert(`Dr. ${selectedDoctor.name} is only available between ${selectedDoctor.shift_start} and ${selectedDoctor.shift_end}.`);
+          return;
+        }
+      }
     }
 
     bookAppointment({
