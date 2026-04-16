@@ -572,7 +572,7 @@ const PatientView = () => {
         <form onSubmit={handleBook} style={{ margin: '20px 0 0', maxWidth: '100%', boxShadow: 'none', padding: 0, display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
           <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
             <label>Selected Date & Time</label>
-            <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} required />
+            <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} step="900" required />
           </div>
           <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
             <label>Department Specialist</label>
@@ -650,7 +650,7 @@ const PatientView = () => {
 
 const WardBoyView = () => {
   const { tasks, user } = useAuth();
-  const pendingTasks = tasks.filter(t => t.wardboyId === user.id && t.status === 'Pending');
+  const pendingTasks = tasks.filter(t => t.wardboyId?.toString() === user.id?.toString() && t.status === 'Pending');
 
   return (
     <div>
@@ -679,7 +679,7 @@ const TaskManagement = ({ canAssign = false }) => {
   const wardboys = users.filter(u => u.role === ROLES.WARDBOY);
   
   // If user is wardboy, show only their tasks, else show all
-  const filteredTasks = user.role === ROLES.WARDBOY ? tasks.filter(t => t.wardboyId === user.id) : tasks;
+  const filteredTasks = user.role === ROLES.WARDBOY ? tasks.filter(t => t.wardboyId?.toString() === user.id?.toString()) : tasks;
 
   const handleAssign = (e) => {
     e.preventDefault();

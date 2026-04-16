@@ -327,7 +327,7 @@ export const AuthProvider = ({ children }) => {
 
   const assignTask = async (wardboyId, description, assignedByRole, assignedByName) => {
     const payload = {
-        wardbid: wardboyId,
+        wardbid: parseInt(wardboyId, 10),
         taskdescription: description,
         assignedbyrole: assignedByRole,
         assignedbyname: assignedByName
