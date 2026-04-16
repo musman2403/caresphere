@@ -610,7 +610,7 @@ const PatientView = () => {
                <option value="">{department ? 'Select a Doctor' : 'Select Department First'}</option>
                <option value="random">Any Doctor (Random)</option>
                {doctorsInDept.map(doc => (
-                 <option key={doc.id} value={doc.id}>{doc.name}</option>
+                 <option key={doc.id} value={doc.id}>{doc.name} (Shift: {doc.shift_start} - {doc.shift_end})</option>
                ))}
             </select>
           </div>
