@@ -640,7 +640,16 @@ const PatientView = () => {
               <tbody>
                 {myAppointments.map(app => (
                   <tr key={app.id}>
-                    <td>{app.department}</td>
+                    <td>
+                      <div style={{fontWeight: '500', color: '#112A46'}}>{app.department}</div>
+                      {(app.disease || app.note) && (
+                        <div style={{fontSize:'0.8rem', color:'#666', marginTop:'4px', fontWeight: 'normal', maxWidth: '300px'}}>
+                          {app.disease && <strong>{app.disease}</strong>}
+                          {app.disease && app.note && <span> - </span>}
+                          {app.note && <span style={{fontStyle:'italic'}}>{app.note}</span>}
+                        </div>
+                      )}
+                    </td>
                     <td>{app.doctorName || 'N/A'}</td>
                     <td>{new Date(app.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</td>
                     <td>
