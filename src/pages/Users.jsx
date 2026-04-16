@@ -107,12 +107,14 @@ const Users = () => {
       payload.salary = editDetails.salary || null;
       payload.phoneno = editDetails.phoneno || null;
       payload.address = editDetails.address || null;
-      payload.shift = editDetails.shift || null;
+      payload.shift_start = editDetails.shift_start || null;
+      payload.shift_end = editDetails.shift_end || null;
       payload.depid = editDetails.depid ? parseInt(editDetails.depid) : null;
     } else if (selectedUser.role === ROLES.RECEPTIONIST) {
       payload.phoneno = editDetails.phoneno || null;
       payload.address = editDetails.address || null;
-      payload.shift = editDetails.shift || null;
+      payload.shift_start = editDetails.shift_start || null;
+      payload.shift_end = editDetails.shift_end || null;
       payload.depid = editDetails.depid ? parseInt(editDetails.depid) : null;
     } else if (selectedUser.role === ROLES.PATIENT) {
       payload.phoneno = editDetails.phoneno || null;
@@ -301,6 +303,12 @@ const Users = () => {
                     <label>Experience (Years)</label>
                     <input type="number" value={editDetails.experience} onChange={e => handleDetailChange('experience', e.target.value)} />
                   </div>
+                </div>
+              )}
+
+              {/* Shared Shifts for all hospital staff */}
+              {(selectedUser.role === ROLES.DOCTOR || selectedUser.role === ROLES.NURSE || selectedUser.role === ROLES.RECEPTIONIST || selectedUser.role === ROLES.WARDBOY) && (
+                <div className="form-group" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
                   <div>
                     <label>Shift Start (HH:mm)</label>
                     <input type="time" value={editDetails.shift_start} onChange={e => handleDetailChange('shift_start', e.target.value)} />
