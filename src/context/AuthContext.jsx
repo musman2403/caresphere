@@ -142,16 +142,19 @@ export const AuthProvider = ({ children }) => {
         wardboy(wardbname)
       `);
       if (!tasksError && tasksData) {
-        setTasks(tasksData.map(t => ({
-          id: t.taskid,
-          wardboyId: t.wardbid,
-          wardboyName: t.wardboy?.wardbname,
-          assignedByRole: t.assignedbyrole,
-          assignedByName: t.assignedbyname,
-          description: t.taskdescription,
-          status: t.status,
-          createdAt: t.createdat
-        })));
+        setTasks(tasksData.map(t => {
+          const wName = t.wardboy?.wardbname || (wardboys || []).find(wb => wb.wardbid?.toString() === t.wardbid?.toString())?.wardbname;
+          return {
+            id: t.taskid,
+            wardboyId: t.wardbid,
+            wardboyName: wName || 'Unknown Wardboy',
+            assignedByRole: t.assignedbyrole,
+            assignedByName: t.assignedbyname,
+            description: t.taskdescription,
+            status: t.status,
+            createdAt: t.createdat
+          };
+        }));
       }
 
     } catch (err) {
@@ -335,9 +338,11 @@ export const AuthProvider = ({ children }) => {
     const { error } = await supabase.from('wardboytasks').insert([payload]);
     if (error) {
       console.error('assignTask error:', error.message);
+      const wName = users.find(u => u.role === 'wardboy' && u.id?.toString() === wardboyId?.toString())?.name;
       setTasks(prev => [...prev, {
         id: Date.now(),
         wardboyId,
+        wardboyName: wName || 'Unknown Wardboy',
         assignedByRole,
         assignedByName,
         description,
