@@ -533,6 +533,11 @@ const PatientView = () => {
   const handleBook = (e) => {
     e.preventDefault();
     const appointmentTime = new Date(date);
+    if (appointmentTime.getMinutes() % 15 !== 0) {
+      alert('Appointments can only be booked in exact 15-minute intervals (e.g. 10:00, 10:15, 10:30, 10:45). Please adjust your time selection.');
+      return;
+    }
+
     const timeString = appointmentTime.toTimeString().substring(0, 5); // HH:mm
 
     let selectedDocId = doctorId;
