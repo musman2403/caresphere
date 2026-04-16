@@ -140,16 +140,17 @@ export const AuthProvider = ({ children }) => {
       const { data: tasksData, error: tasksError } = await supabase.from('wardboytasks').select('*');
       if (!tasksError && tasksData) {
         setTasks(tasksData.map(t => {
-          const wName = t.wardboy?.wardbname || (wardboys || []).find(wb => String(wb.wardbid) === String(t.wardbid))?.wardbname;
+          const wId = t.wardbid || t.WardBid || t.wardboyId || t.wardboy_id;
+          const wName = t.wardboy?.wardbname || (wardboys || []).find(wb => String(wb.wardbid || wb.WardBid || wb.wardboy_id) === String(wId))?.wardbname;
           return {
-            id: t.taskid,
-            wardboyId: t.wardbid,
+            id: t.taskid || t.TaskId || t.task_id || t.id,
+            wardboyId: wId,
             wardboyName: wName || 'Unknown Wardboy',
-            assignedByRole: t.assignedbyrole,
-            assignedByName: t.assignedbyname,
-            description: t.taskdescription,
-            status: t.status,
-            createdAt: t.createdat
+            assignedByRole: t.assignedbyrole || t.AssignedByRole || t.assigned_by_role,
+            assignedByName: t.assignedbyname || t.AssignedByName || t.assigned_by_name,
+            description: t.taskdescription || t.TaskDescription || t.task_description,
+            status: t.status || t.Status,
+            createdAt: t.createdat || t.CreatedAt || t.created_at
           };
         }));
       }
